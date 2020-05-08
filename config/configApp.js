@@ -3,7 +3,7 @@ let appConfig = {
     allowedCorsOrigin: "*",
     environment: "dev",
     db: {
-        url: 'mongodb://127.0.0.1:27017/chatAppDB'
+        url: 'mongodb://127.0.0.1:27017/ChatAppDB'
     },
     apiVersion: '/api/v1'
 }
