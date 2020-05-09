@@ -34,7 +34,8 @@ app.use('/users', usersRouter);
 const connect = mongoose.connect(appConfig.db.url, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useCreateIndex: true
+    useCreateIndex: true,
+    useFindAndModify: false
 });
 connect.then((db) => {
     console.log("Connected correctly to server");

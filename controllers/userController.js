@@ -19,49 +19,53 @@ let userController = {
 
     signUp: (req, res) => {
 
+        //Local Function Start-->
+
         let validateUserInput = () => {
-                return new Promise((resolve, reject) => {
-                    if (!req.body.email || !req.body.password) {
-                        logger.error('Field Missing During User Creation', 'userController: validateUserInput()', 5);
-                        reject(response.generate(true, 'One or More Parameter(s) is missing', 400, null));
-                    } else if (!validate.email(req.body.email)) {
-                        logger.error('Email Field Not Valid During User Creation', 'userController: validateUserInput()', 5);
-                        reject(response.generate(true, 'Email does not met the requirement', 400, null));
-                    } else if (!validate.password(req.body.password)) {
-                        logger.error('Password Field Not Valid During User Creation', 'userController: validateUserInput()', 5);
-                        reject(response.generate(true, 'Password does not met the requirement', 400, null));
-                    } else {
-                        logger.info('User input validated', 'userController: validateUserInput()', 5);
-                        resolve(req);
-                    }
-                });
-            } // end validate user input
+            return new Promise((resolve, reject) => {
+                if (!req.body.email || !req.body.password) {
+                    logger.error('Field Missing During User Creation', 'userController: validateUserInput()', 5);
+                    reject(response.generate(true, 'One or More Parameter(s) is missing', 400, null));
+                } else if (!validate.email(req.body.email)) {
+                    logger.error('Email Field Not Valid During User Creation', 'userController: validateUserInput()', 5);
+                    reject(response.generate(true, 'Email does not met the requirement', 400, null));
+                } else if (!validate.password(req.body.password)) {
+                    logger.error('Password Field Not Valid During User Creation', 'userController: validateUserInput()', 5);
+                    reject(response.generate(true, 'Password does not met the requirement', 400, null));
+                } else {
+                    logger.info('User Input Validated', 'userController: validateUserInput()', 5);
+                    resolve(req);
+                }
+            });
+        }
+
         let createUser = () => {
-                return new Promise((resolve, reject) => {
+            return new Promise((resolve, reject) => {
 
-                    let newUser = {
-                        userId: shortid.generate(),
-                        firstName: req.body.firstName,
-                        lastName: req.body.lastName,
-                        email: req.body.email.toLowerCase(),
-                        mobileNumber: req.body.mobileNumber,
-                        password: password.hashpassword(req.body.password),
-                        createdOn: time.now()
-                    };
+                let newUser = {
+                    userId: shortid.generate(),
+                    firstName: req.body.firstName,
+                    lastName: req.body.lastName,
+                    email: req.body.email.toLowerCase(),
+                    mobileNumber: req.body.mobileNumber,
+                    password: password.hashpassword(req.body.password),
+                    createdOn: time.now()
+                };
 
-                    UserModel.create(newUser)
-                        .then((user) => {
-                            logger.info('User created', 'userController: createUser', 10);
-                            resolve(user.toObject());
-                        })
-                        .catch((err) => {
-                            logger.error(err, 'userController: createUser', 10);
-                            reject(response.generate(true, 'Failed to create user', 403, null));
-                        });
+                UserModel.create(newUser)
+                    .then((user) => {
+                        logger.info('User Created', 'userController: createUser', 10);
+                        resolve(user.toObject());
+                    })
+                    .catch((err) => {
+                        logger.error(err, 'userController: createUser', 10);
+                        reject(response.generate(true, 'Failed to create user', 403, null));
+                    });
 
-                });
-            } // end create user function
+            });
+        }
 
+        //<--Local Functions End
 
         validateUserInput(req, res)
             .then(createUser)
@@ -77,6 +81,9 @@ let userController = {
     },
 
     login: (req, res) => {
+
+        //Local Function Start-->
+
         let findUser = () => {
             return new Promise((resolve, reject) => {
 
@@ -137,6 +144,7 @@ let userController = {
                     });
             });
         }
+
         let saveToken = (tokenDetails) => {
             let newAuthToken = new AuthModel({
                 userId: tokenDetails.userId,
@@ -160,6 +168,8 @@ let userController = {
                     });
             });
         }
+
+        //<--Local Functions End
 
         findUser(req, res)
             .then(validatePassword)
@@ -191,7 +201,83 @@ let userController = {
                 logger.error(err, 'user Controller: logout', 10);
                 res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
             });
+    },
+
+    getUsers: (req, res) => {
+        UserModel.find()
+            .select(' -__v -_id')
+            .exec()
+            .then((users) => {
+                if (check.isEmpty(users)) {
+                    logger.info('No User Found', 'User Controller: getUsers');
+                    res.send(response.generate(true, 'No User Found', 404, null));
+                } else {
+                    logger.info('Users Found', 'User Controller: getUsers');
+                    res.send(response.generate(false, 'All User Details Found', 200, users));
+                }
+            })
+            .catch((err) => {
+                logger.error(err, 'User Controller: getUsers', 10);
+                res.send(response.generate(true, 'Failed To Find User Details', 500, null));
+            });
+    },
+
+    getUser: (req, res) => {
+        UserModel.findOne({ 'userId': req.params.userId })
+            .select('-password -__v -_id')
+            .exec()
+            .then((user) => {
+                if (check.isEmpty(user)) {
+                    logger.info('No User Found', 'User Controller:getUser');
+                    res.send(response.generate(true, 'No User Found', 404, null));
+                } else {
+                    logger.info('User Found', 'User Controller:getUser');
+                    res.send(response.generate(false, 'User Details Found', 200, user));
+                }
+            })
+            .catch((err) => {
+                logger.error(err.message, 'User Controller: getUser', 10);
+                res.send(response.generate(true, 'Failed To Find User Details', 500, null));
+            });
+    },
+
+    deleteUser: (req, res) => {
+        UserModel.findOneAndDelete({ 'userId': req.params.userId })
+            .then((result) => {
+                if (check.isEmpty(result)) {
+                    logger.info('No User Found', 'User Controller: deleteUser');
+                    res.send(response.generate(true, 'No User Found', 404, null));
+                } else {
+                    logger.info('User Deleted', 'User Controller: deleteUser');
+                    res.send(response.generate(false, 'Deleted the user successfully', 200, result));
+                }
+            })
+            .catch((err) => {
+                logger.error(err.message, 'User Controller: deleteUser', 10);
+                res.send(response.generate(true, 'Failed To delete user', 500, null));
+            });
+    },
+
+    editUser: (req, res) => {
+        UserModel.findOneAndUpdate(req.params.userId, {
+                $set: req.body
+            }, { new: true, useFindAndModify: false }) //To return updated document
+            //.update({ 'userId': req.params.userId }, req.body) //Alternative
+            .then((user) => {
+                if (check.isEmpty(user)) {
+                    logger.info('No User Found', 'User Controller: editUser');
+                    res.send(response.generate(true, 'No User Found', 404, null));
+                } else {
+                    logger.info('User Updated', 'User Controller: editUser');
+                    res.send(response.generate(false, 'User details edited', 200, user));
+                }
+            })
+            .catch((err) => {
+                logger.error(err.message, 'User Controller:editUser', 10);
+                res.send(response.generate(true, 'Failed To edit user details', 500, null));
+            });
     }
+
 }
 
 module.exports = userController;
