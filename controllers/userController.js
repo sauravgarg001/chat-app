@@ -261,7 +261,7 @@ let userController = {
     editUser: (req, res) => {
         UserModel.findOneAndUpdate(req.params.userId, {
                 $set: req.body
-            }, { new: true, useFindAndModify: false }) //To return updated document
+            }, { new: true }) //To return updated document
             //.update({ 'userId': req.params.userId }, req.body) //Alternative
             .then((user) => {
                 if (check.isEmpty(user)) {

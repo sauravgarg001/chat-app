@@ -17,6 +17,6 @@ let Auth = new Schema({
         type: Date,
         default: time.now()
     }
-})
+});
 
 module.exports = mongoose.model('Auth', Auth);

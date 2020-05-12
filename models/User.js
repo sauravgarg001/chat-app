@@ -33,6 +33,6 @@ let userSchema = new mongoose.Schema({
         type: Date,
         default: ""
     }
-})
+});
 
 module.exports = mongoose.model('User', userSchema);
