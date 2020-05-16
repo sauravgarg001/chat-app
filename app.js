@@ -1,9 +1,11 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
 const mongoose = require('mongoose');
+
+//Config
 const appConfig = require('./config/configApp');
 
 var app = express();
@@ -12,22 +14,25 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
-//Libraries
+//Middlewares
 app.use(logger(appConfig.environment));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'client')));
 
 //Models
 const UserModel = require('./models/User');
 const AuthModel = require('./models/Auth');
+const ChatModel = require('./models/Chat');
 
 //Routes
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const indexRouter = require('./routes/index');
+const userRouter = require('./routes/user');
+const chatRouter = require('./routes/chat');
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/user', userRouter);
+app.use('/chat', chatRouter);
 
 
 //Mongoose connection
@@ -38,7 +43,7 @@ const connect = mongoose.connect(appConfig.db.url, {
     useFindAndModify: false
 });
 connect.then((db) => {
-    console.log("Connected correctly to server");
+    console.log("Mongoose connection successfully opened");
 }, (err) => { console.log(err); });
 
 

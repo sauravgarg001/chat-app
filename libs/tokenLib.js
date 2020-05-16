@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken')
 const shortid = require('shortid')
-const secretKey = 'IncubsenceChatApp';
+
+//Config
+const appConfig = require('../config/configApp');
 
 let tokenLib = {
     generateToken: (data) => {
@@ -15,12 +17,12 @@ let tokenLib = {
                     data: data
                 }
                 let tokenDetails = {
-                    token: jwt.sign(claims, secretKey),
-                    tokenSecret: secretKey
+                    token: jwt.sign(claims, appConfig.authToken.secretKey),
+                    tokenSecret: appConfig.authToken.secretKey
                 }
-                resolve(tokenDetails)
+                resolve(tokenDetails);
             } catch (err) {
-                reject(err)
+                reject(err);
             }
         });
     },
@@ -28,7 +30,18 @@ let tokenLib = {
         return new Promise((resolve, reject) => {
             jwt.verify(token, secretKey, function(err, decoded) {
                 if (err) {
-                    reject(err)
+                    reject(err);
+                } else {
+                    resolve(decoded);
+                }
+            });
+        });
+    },
+    verifyTokenWithoutSecret: (token) => {
+        return new Promise((resolve, reject) => {
+            jwt.verify(token, appConfig.authToken.secretKey, function(err, decoded) {
+                if (err) {
+                    reject(err);
                 } else {
                     resolve(decoded);
                 }

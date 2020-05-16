@@ -45,7 +45,7 @@ let userController = {
                 let newUser = {
                     userId: shortid.generate(),
                     firstName: req.body.firstName,
-                    lastName: req.body.lastName,
+                    lastName: req.body.lastName || '',
                     email: req.body.email.toLowerCase(),
                     mobileNumber: req.body.mobileNumber,
                     password: password.hashpassword(req.body.password),
@@ -74,7 +74,7 @@ let userController = {
                 res.send(response.generate(false, 'User created', 200, user));
             })
             .catch((err) => {
-                console.log(err);
+                res.status(err.status);
                 res.send(err);
             });
 
@@ -158,7 +158,7 @@ let userController = {
                         logger.info('Token Saved', 'userController: saveToken()', 10);
                         let responseBody = {
                             authToken: token.authToken,
-                            user: token.user
+                            userId: token.userId
                         }
                         resolve(responseBody);
                     })
@@ -180,7 +180,6 @@ let userController = {
                 res.send(response.generate(false, 'Login Successful', 200, resolve));
             })
             .catch((err) => {
-                console.log(err);
                 res.status(err.status);
                 res.send(err);
             });
@@ -199,6 +198,7 @@ let userController = {
             })
             .catch((err) => {
                 logger.error(err, 'user Controller: logout', 10);
+                res.status(err.status);
                 res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
             });
     },
@@ -218,6 +218,7 @@ let userController = {
             })
             .catch((err) => {
                 logger.error(err, 'User Controller: getUsers', 10);
+                res.status(err.status);
                 res.send(response.generate(true, 'Failed To Find User Details', 500, null));
             });
     },
@@ -236,6 +237,7 @@ let userController = {
                 }
             })
             .catch((err) => {
+                res.status(err.status);
                 logger.error(err.message, 'User Controller: getUser', 10);
                 res.send(response.generate(true, 'Failed To Find User Details', 500, null));
             });
@@ -253,6 +255,7 @@ let userController = {
                 }
             })
             .catch((err) => {
+                res.status(err.status);
                 logger.error(err.message, 'User Controller: deleteUser', 10);
                 res.send(response.generate(true, 'Failed To delete user', 500, null));
             });
@@ -273,6 +276,7 @@ let userController = {
                 }
             })
             .catch((err) => {
+                res.status(err.status);
                 logger.error(err.message, 'User Controller:editUser', 10);
                 res.send(response.generate(true, 'Failed To edit user details', 500, null));
             });

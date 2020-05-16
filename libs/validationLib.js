@@ -8,7 +8,7 @@ let validationsLib = {
         }
     },
     password: (password) => {
-        let passwordRegex = /^[A-Za-z0-9]\w{7,}$/; /* Minimum 8 characters which contain only characters,numeric digits, underscore and first character must be a letter */
+        let passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/; /* Minimum 8 characters which contain only one capital letter, one special character<br>1 digit and one small letter */
         if (password.match(passwordRegex)) {
             return password;
         } else {
