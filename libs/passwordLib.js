@@ -10,9 +10,6 @@ let passwordLib = {
     },
     comparePassword: (oldPassword, hashpassword) => {
         return bcrypt.compare(oldPassword, hashpassword);
-    },
-    comparePasswordSync: (myPlaintextPassword, hash) => {
-        return bcrypt.compareSync(myPlaintextPassword, hash);
     }
 }
 

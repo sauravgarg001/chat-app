@@ -164,7 +164,9 @@ let userController = {
                     })
                     .catch((err) => {
                         logger.error(err, 'userController: saveToken()', 10);
-                        reject(response.generate(true, 'Failed To Generate Token', 500, null));
+                        req.user = { userId: tokenDetails.userId };
+                        userController.logout(req, res);
+                        reject(response.generate(true, 'Failed you may be login somewhere else, Try Again!', 500, null));
                     });
             });
         }

@@ -13,6 +13,9 @@ const check = require("./checkLib");
 //Models
 const ChatModel = mongoose.model('Chat');
 
+//Middlewares
+const auth = require('../middlewares/auth');
+
 
 let setServer = (server) => {
 
@@ -31,7 +34,7 @@ let setServer = (server) => {
 
             console.log("set user called");
 
-            token.verifyTokenWithoutSecret(authToken)
+            token.verifyTokenFromDatabase(authToken)
                 .then((user) => {
                     console.log("user is verified..setting details");
                     let currentUser = user.data;
@@ -42,7 +45,7 @@ let setServer = (server) => {
                     let fullName = `${currentUser.firstName} ${currentUser.lastName}`
 
                     let key = currentUser.userId
-                    let value = fullName
+                    let value = authToken
 
                     redis.setANewOnlineUserInHash("onlineUsers", key, value)
                         .then((res) => {
@@ -55,8 +58,8 @@ let setServer = (server) => {
                                     socket.room = 'incubChat';
                                     // joining chat-group room.
                                     socket.join(socket.room);
-                                    socket.to(socket.room).broadcast.emit('online-user-list', result);
-                                    socket.emit('online-user-list', result);
+                                    socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
+                                    socket.emit('online-user-list', Object.keys(result));
 
                                 })
                                 .catch((err) => {
@@ -83,7 +86,7 @@ let setServer = (server) => {
                 redis.getAllUsersInAHash('onlineUsers')
                     .then((result) => {
                         socket.leave(socket.room) // unsubscribe the user from his own channel
-                        socket.to(socket.room).broadcast.emit('online-user-list', result);
+                        socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
                     })
                     .catch((err) => {
                         console.log(err);
@@ -94,22 +97,40 @@ let setServer = (server) => {
 
 
         socket.on('chat-msg', (data) => {
+            let chatMessage = data.chatMessage;
 
-            data['chatId'] = shortid.generate();
-            console.log("Message received:" + data);
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
 
-            setTimeout(function() { //save chat after two second delay
+                if (user.data.userId == chatMessage.senderId) {
+                    chatMessage['chatId'] = shortid.generate();
+                    console.log("Message received:" + chatMessage);
 
-                eventEmitter.emit('save-chat', data);
+                    setTimeout(function() { //save chat after one second delay
 
-            }, 2000);
-            myIo.emit(data.receiverId, data);
+                        eventEmitter.emit('save-chat', chatMessage);
 
+                    }, 1000);
+
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            console.log(result[chatMessage.receiverId]);
+
+                            myIo.emit(result[chatMessage.receiverId], chatMessage);
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to send message using " + chatMessage.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log(err);
+            });
         });
 
-        socket.on('typing', (fullName) => {
+        socket.on('typing', (id) => {
 
-            socket.to(socket.room).broadcast.emit('typing', fullName);
+            socket.to(socket.room).broadcast.emit('typing', id);
 
         });
 

@@ -87,7 +87,7 @@ let chatController = {
 
         let validateParams = () => {
             return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.query.chatIds)) {
+                if (check.isEmpty(req.body.chatIds) || check.isEmpty(req.body.receiverId)) {
                     logger.error('Parameters Missing', 'chatController: markUserChatFromSenderSeen(): validateParams()', 9);
                     reject(response.generate(true, 'parameters missing.', 403, null));
                 } else {
@@ -100,7 +100,8 @@ let chatController = {
         let modifyChat = () => {
             return new Promise((resolve, reject) => {
                 let findQuery = {
-                    chatId: req.query.chatIds
+                    chatId: { $in: req.body.chatIds },
+                    receiverId: req.body.receiverId
                 }
 
                 let updateQuery = {

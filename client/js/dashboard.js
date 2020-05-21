@@ -1,12 +1,11 @@
+const baseUrl = 'http://localhost:3000';
+const socket = io(baseUrl); // connecting with sockets.
+const authToken = getCookie("authToken");
+const userId = getCookie("userId");
+let name = "";
+let flag = true; //for initialization
+//---------------------------------------------------------------------------------------------------------------
 $(document).ready(function() {
-    const baseUrl = 'http://localhost:3000';
-    const socket = io(baseUrl); // connecting with sockets.
-    const authToken = getCookie("authToken");
-    const userId = getCookie("userId");
-    let name = "";
-    let flag = true; //for initialization
-
-    //-------------------------------------------------------------------------------------------------------------------
 
     let chatSocket = () => {
         //-------------------------------------------------
@@ -18,7 +17,7 @@ $(document).ready(function() {
 
         });
         //-------------------------------------------------
-        socket.on(userId, (data) => { //Message received
+        socket.on(authToken, (data) => { //Message received
 
             let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender");
             //Add message to chatbox
@@ -27,15 +26,33 @@ $(document).ready(function() {
                 let parent = $("#message-recieved-block").parent();
                 let message = $("#message-recieved-block").clone();
                 $(message).find(".message-recieved").text(data.message);
+                $(message).find(".time").text(changeTo12Hour(data.createdOn));
+                $(message).find(".message-recieved-id").val(data.chatId);
                 $(message).prop("hidden", false).prop("id", "");
                 $(parent).append($(message));
+
+                let unseenMessages = Array();
+                unseenMessages.push(data.chatId);
+                setTimeout(function() {
+                    console.log(unseenMessages);
+
+                    markChatAsSeen(unseenMessages);
+                }, 3000);
+                $('#unread-messages').hide();
             }
 
             //Add message to userlist
             $(sender).find(".sender-message").text(data.message);
-            $(sender).find(".sender-message-date").text(formatDate(data.createdOn));
+            $(sender).find(".sender-message-date").text(" ");
             $(sender).find(".sender-message-time").text(changeTo12Hour(data.createdOn));
-            $(sender).find(".sender-message-status").text("New message");
+            let unreadCount = parseInt($(sender).find(".sender-unread-messages-count").text()) + 1;
+            $(sender).find(".sender-unread-messages-count").text(unreadCount);
+            $(sender).find(".sender-unread-messages-count").show();
+            if ($(sender).hasClass("active")) {
+                setTimeout(function() {
+                    $(sender).find(".sender-unread-messages-count").text(0).fadeOut();
+                }, 3000);
+            }
             let parent = $(sender).parent();
             let clone = $(sender).clone();
             $(sender).remove();
@@ -47,23 +64,27 @@ $(document).ready(function() {
 
         });
         //-------------------------------------------------
-        socket.on("online-user-list", (jsonData) => {
+        socket.on("online-user-list", (users) => {
 
-            $(".sender").find(".sender-message-status").text("Offline");
-            for (const [id, name] of Object.entries(jsonData)) {
-                if (userId == id)
-                    continue;
-                $(`.sender .sender-id:contains(${id})`).parent().find(".sender-message-status").text("Online").css("color", "green");
+            $(".sender").find(".sender-message-status").hide();
+            if (Array.isArray(users)) {
+                for (let id of users) {
+                    if (userId == id)
+                        continue;
+                    $(`.sender .sender-id:contains(${id})`).parent().find(".sender-message-status").show();
+                }
             }
 
         });
         //-------------------------------------------------
-        socket.on("typing", (name) => {
-            let sender = $(`.sender .sender-name:contains(${name})`).parent();
+        socket.on("typing", (id) => {
+            let sender = $(`.sender .sender-id:contains(${id})`).parent();
             setTimeout(function() {
-                $(sender).find(".sender-message-status").text("Online");
-            }, 1500);
-            $(sender).find(".sender-message-status").text("typing...");
+                $(sender).find(".sender-message-typing").hide();
+                $(sender).find(".sender-message").show();
+            }, 800);
+            $(sender).find(".sender-message").hide();
+            $(sender).find(".sender-message-typing").show();
 
         });
         //-------------------------------------------------
@@ -83,7 +104,7 @@ $(document).ready(function() {
             let sender = $(`.sender .sender-id:contains(${chatMessage.receiverId})`).parents(".sender");
             $(sender).find(".sender-message").text(chatMessage.message);
             $(sender).find(".sender-message-time").text(changeTo12Hour(chatMessage.createdOn));
-            $(sender).find(".sender-message-date").text(formatDate(chatMessage.createdOn));
+            $(sender).find(".sender-message-date").text(" ");
             let parent = $(sender).parent();
             let clone = $(sender).clone();
             $(sender).remove();
@@ -94,19 +115,26 @@ $(document).ready(function() {
             parent = $("#message-sent-block").parent();
             let message = $("#message-sent-block").clone();
             $(message).find(".message-sent").text(chatMessage.message);
+            $(message).find(".message-sent-id").val(chatMessage.chatId);
+            $(message).find(".time").text(changeTo12Hour(chatMessage.createdOn));
             $(message).prop("hidden", false).prop("id", "");
             $(parent).append($(message)).fadeIn('slow');
 
+            let data = {
+                authToken: authToken,
+                chatMessage: chatMessage
+            }
 
-            socket.emit("chat-msg", chatMessage)
+            socket.emit("chat-msg", data)
             $("#message").val("");
             $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
             $("#noMessage").prop("hidden", true);
+            $('#unread-messages').hide();
         });
 
         $("#message").on('keypress', function() {
 
-            socket.emit("typing", name)
+            socket.emit("typing", userId)
 
         });
         //-------------------------------------------------
@@ -162,7 +190,7 @@ $(document).ready(function() {
             },
             "json");
 
-        $(".sender").find(".sender-message-status").css("color", "red").text("Offline");
+        $(".sender").find(".sender-message-status").hide();
     }
 
     initialize();
@@ -207,6 +235,7 @@ $(document).ready(function() {
     //-------------------------------------------------
     $('body').on('click', '.sender', function() { //for dynamic elements
 
+        $("#unread-messages").hide();
         $("#sendMessage").prop("hidden", false);
         $("#noMessage").prop("hidden", false);
         $(".sender").removeClass("active");
@@ -230,6 +259,8 @@ $(document).ready(function() {
 
 
                         let date = formatDate(new Date());
+                        let unseenMessages = Array();
+                        let unseenFlag = true;
 
                         for (let i = 0; i < data.length && !flag; i++) {
 
@@ -248,19 +279,34 @@ $(document).ready(function() {
                             }
 
                             if (data[i].senderId == userId) {
+                                if (unseenMessages.length != 0 && unseenFlag) {
+                                    setUnreadMessagesInChatBox(id, unseenMessages);
+                                    unseenFlag = false;
+                                }
 
                                 let parent = $("#message-sent-block").parent();
                                 let message = $("#message-sent-block").clone();
                                 $(message).find(".message-sent").text(data[i].message);
+                                $(message).find(".message-sent-id").val(data[i].chatId);
                                 $(message).find(".time").text(changeTo12Hour(data[i].createdOn));
                                 $(message).prop("hidden", false).prop("id", "");
                                 $(parent).prepend($(message));
+                                unseenFlag = false;
 
                             } else if (data[i].receiverId == userId) {
+                                if (!data[i].seen) {
+                                    unseenMessages.push(data[i].chatId);
+                                } else if (unseenFlag && unseenMessages.length != 0) {
+
+                                    setUnreadMessagesInChatBox(id, unseenMessages)
+                                    unseenFlag = false;
+
+                                }
 
                                 let parent = $("#message-recieved-block").parent();
                                 let message = $("#message-recieved-block").clone();
                                 $(message).find(".message-recieved").text(data[i].message);
+                                $(message).find(".message-recieved-id").val(data[i].chatId);
                                 $(message).find(".time").text(changeTo12Hour(data[i].createdOn));
                                 $(message).prop("hidden", false).prop("id", "");
                                 $(parent).prepend($(message));
@@ -283,14 +329,35 @@ $(document).ready(function() {
 
                         }
 
+                        if (flag) {
+                            let count = 0;
+                            for (let i = 0; i < data.length; i++) {
+                                if (data[i].receiverId == userId && !data[i].seen) {
+                                    count++;
+                                }
+                            }
+                            if (count != 0) {
+                                let sender = $(`.sender .sender-id:contains(${id})`).parents(".sender");
+                                $(sender).find(".sender-unread-messages-count").text(count).slideDown();
+                            }
+                        } else if (unseenFlag && unseenMessages.length != 0) {
+
+                            setUnreadMessagesInChatBox(id, unseenMessages);
+                            unseenFlag = false;
+
+                        }
+
+
                         $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
 
                         //Add message to userlist
                         let sender = $(`.sender .sender-id:contains(${id})`).parents(".sender");
                         $(sender).find(".sender-message").text(data[0].message);
                         $(sender).find(".sender-message-time").text(changeTo12Hour(data[0].createdOn));
-                        $(sender).find(".sender-message-date").text(formatDate(data[0].createdOn));
-
+                        if (formatDate(data[0].createdOn) == formatDate(new Date()))
+                            $(sender).find(".sender-message-date").text(" ");
+                        else
+                            $(sender).find(".sender-message-date").text(formatDate(data[0].createdOn));
 
                         setTimeout(function() {
                             let msgSender = $(".sender:not(#sender)").first();
@@ -332,7 +399,7 @@ $(document).ready(function() {
     });
 
 });
-
+//---------------------------------------------------------------------------------------------------------------
 function changeTo12Hour(time) {
     let date = new Date(time);
     let hours = date.getHours();
@@ -389,4 +456,48 @@ function unformatDate(date) {
 
 
     return `${year}-${month}-${day}`;
+}
+
+function setUnreadMessagesInChatBox(id, unseenMessages) {
+    if (unseenMessages.length != 0) {
+        let parent = $("#unread-messages").parent();
+        let element = $("#unread-messages");
+        let unreadMessages = $("#unread-messages").clone();
+        $(unreadMessages).show();
+        $(unreadMessages).find("#unread-messages-count").text(unseenMessages.length);
+        $(parent).prepend($(unreadMessages));
+        $(element).remove();
+        $(".sender.active .sender-unread-messages-count").text(unseenMessages.length).slideDown();
+    }
+    setTimeout(function() {
+        $("#unread-messages").fadeOut();
+        let sender = $(`.sender .sender-id:contains(${id})`).parents(".sender");
+        $(sender).find(".sender-unread-messages-count").text(0).hide();
+        markChatAsSeen(unseenMessages);
+    }, 3000);
+}
+
+function markChatAsSeen(unseenMessages) {
+
+    let object = {
+        chatIds: unseenMessages,
+        receiverId: userId,
+        authToken: authToken
+    }
+    let json = JSON.stringify(object);
+
+    $.ajax({
+        type: 'PUT', // Type of request to be send, called as method
+        url: `${baseUrl}/chat/single/seen/sender/mark`, // Url to which the request is send
+        data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+        cache: false, // To unable request pages to be cached
+        contentType: 'application/json', // The content type used when sending data to the server.
+        processData: false, // To send DOMDocument or non processed data file it is set to false
+        success: function(response) { // A function to be called if request succeeds
+            console.log(response);
+        },
+        error: function(response) { // A function to be called if request failed
+            console.error(response);
+        }
+    });
 }

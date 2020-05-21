@@ -1,8 +1,14 @@
 const jwt = require('jsonwebtoken')
 const shortid = require('shortid')
+const mongoose = require('mongoose');
+const logger = require('../libs/loggerLib');
+const check = require('../libs/checkLib');
 
 //Config
 const appConfig = require('../config/configApp');
+
+//Models
+const AuthModel = mongoose.model('Auth');
 
 let tokenLib = {
     generateToken: (data) => {
@@ -37,15 +43,30 @@ let tokenLib = {
             });
         });
     },
-    verifyTokenWithoutSecret: (token) => {
+    verifyTokenFromDatabase: (token) => {
+
         return new Promise((resolve, reject) => {
-            jwt.verify(token, appConfig.authToken.secretKey, function(err, decoded) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(decoded);
-                }
-            });
+            AuthModel.findOne({ authToken: token })
+                .then((auth) => {
+                    if (check.isEmpty(auth)) {
+                        logger.error('No Authorization Key Is Present', 'tokenLib: verifyTokenFromDatabase()', 10);
+                        reject('Invalid Or Expired AuthorizationKey');
+                    } else {
+                        tokenLib.verifyToken(auth.authToken, auth.tokenSecret)
+                            .then((decoded) => {
+                                logger.info('authToken Verfied', 'tokenLib: verifyTokenFromDatabase()', 10);
+                                resolve(decoded);
+                            })
+                            .catch((err) => {
+                                logger.error(err, 'tokenLib: verifyTokenFromDatabase()', 10);
+                                reject('Failed To Authorized');
+                            })
+                    }
+                })
+                .catch((err) => {
+                    logger.error(err.message, 'tokenLib: verifyTokenFromDatabase()', 10);
+                    reject('Failed To Authorized');
+                });
         });
     }
 }
