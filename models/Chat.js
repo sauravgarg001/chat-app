@@ -33,6 +33,10 @@ let chatSchema = new Schema({
         type: Boolean,
         default: false
     },
+    delivered: {
+        type: Boolean,
+        default: false
+    },
     createdOn: {
         type: Date,
         default: Date.now

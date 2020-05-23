@@ -10,7 +10,8 @@ let appConfig = {
         password: 'PnfS4znVzb9NHgqdGnmYxZqDQsbw0sUs'
     },
     authToken: {
-        secretKey: 'IncubsenceChatApp'
+        secretKey: 'IncubsenceChatApp',
+        passphrase: 'IncubsenceChatApp'
     },
     apiVersion: '/api/v1'
 }

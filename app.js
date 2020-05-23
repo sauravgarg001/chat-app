@@ -4,10 +4,20 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const mongoose = require('mongoose');
+//const cors = require('cors')
 
 //Config
 const appConfig = require('./config/configApp');
-
+// var whitelist = ['http://localhost', 'http://localhost:3000']; //for cross origin access
+// var corsOptions = {
+//     origin: function(origin, callback) {
+//         if (whitelist.indexOf(origin) !== -1) {
+//             callback(null, true)
+//         } else {
+//             callback(new Error('Not allowed by CORS'))
+//         }
+//     }
+// }
 var app = express();
 
 // view engine setup
@@ -16,6 +26,7 @@ app.set('view engine', 'jade');
 
 //Middlewares
 app.use(logger(appConfig.environment));
+//app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());

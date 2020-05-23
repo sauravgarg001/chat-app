@@ -17,11 +17,11 @@ let userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        default: 'passskdajakdjkadsj'
+        required: true
     },
     email: {
         type: String,
-        default: '',
+        required: true,
         unique: true
     },
     mobileNumber: {

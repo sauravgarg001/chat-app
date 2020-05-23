@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const logger = require('../libs/loggerLib');
 const check = require('../libs/checkLib');
 
+//https://github.com/auth0/node-jsonwebtoken
+
 //Config
 const appConfig = require('../config/configApp');
 
@@ -14,12 +16,13 @@ let tokenLib = {
     generateToken: (data) => {
         return new Promise((resolve, reject) => {
             try {
+                //default algorithm: HS256->HMAC using SHA-256 hash algorithm
                 let claims = {
                     jwtid: shortid.generate(),
                     iat: Date.now(),
-                    exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24),
-                    sub: 'authToken',
-                    iss: 'incubChat',
+                    exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), //Expires in 1 day
+                    sub: 'authToken', //Subject
+                    iss: 'incubChat', //Organisation->Issuer
                     data: data
                 }
                 let tokenDetails = {

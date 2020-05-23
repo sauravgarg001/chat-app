@@ -21,7 +21,7 @@ let setServer = (server) => {
 
     let io = socketio.listen(server);
 
-    let myIo = io.of('/'); //Namespaces '/' -> for creating multilple RTC in single website with diffrent namspace
+    let myIo = io.of('/'); //Namespaces '/' -> for creating multilple RTC in single website with different namspace
 
     myIo.on('connection', (socket) => { //All events should be inside this connection
 
@@ -128,10 +128,25 @@ let setServer = (server) => {
             });
         });
 
-        socket.on('typing', (id) => {
+        socket.on('typing', (data) => {
 
-            socket.to(socket.room).broadcast.emit('typing', id);
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
 
+                if (user.data.userId == data.senderId) {
+
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            myIo.emit('typing@' + result[data.receiverId], data.senderId);
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to check typing status using " + data.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log(err);
+            });
         });
 
     });

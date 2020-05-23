@@ -9,7 +9,7 @@ $(document).ready(function() {
 
     let chatSocket = () => {
         //-------------------------------------------------
-        socket.on('verifyUser', (data) => {
+        socket.on('verifyUser', (data) => { //verify user from auth Token
 
             console.log("socket trying to verify user");
 
@@ -19,9 +19,10 @@ $(document).ready(function() {
         //-------------------------------------------------
         socket.on(authToken, (data) => { //Message received
 
-            let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender");
+            let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender"); //get sender's element who's message came
+
             //Add message to chatbox
-            if ($(sender).hasClass("active")) {
+            if ($(sender).hasClass("active")) { //Check if the user has openned the chat of the person who's message came
                 $("#noMessage").prop("hidden", true);
                 let parent = $("#message-recieved-block").parent();
                 let message = $("#message-recieved-block").clone();
@@ -77,12 +78,13 @@ $(document).ready(function() {
 
         });
         //-------------------------------------------------
-        socket.on("typing", (id) => {
-            let sender = $(`.sender .sender-id:contains(${id})`).parent();
+        socket.on("typing@" + authToken, (id) => {
             setTimeout(function() {
+                let sender = $(`.sender .sender-id:contains(${id})`).parent();
                 $(sender).find(".sender-message-typing").hide();
                 $(sender).find(".sender-message").show();
-            }, 800);
+            }, 1000);
+            let sender = $(`.sender .sender-id:contains(${id})`).parent();
             $(sender).find(".sender-message").hide();
             $(sender).find(".sender-message-typing").show();
 
@@ -134,7 +136,12 @@ $(document).ready(function() {
 
         $("#message").on('keypress', function() {
 
-            socket.emit("typing", userId)
+            let data = {
+                senderId: userId,
+                receiverId: $(".sender.active").find(".sender-id").text(),
+                authToken: authToken
+            }
+            socket.emit("typing", data)
 
         });
         //-------------------------------------------------
@@ -151,7 +158,7 @@ $(document).ready(function() {
 
     function initialize() {
         if (!authToken || !userId)
-            window.location.href = "index.html";
+            $("#logout").trigger('click');
         chatSocket();
 
         $.get(`${baseUrl}/user/${userId}`, { authToken: authToken },
