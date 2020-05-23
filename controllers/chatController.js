@@ -50,8 +50,8 @@ let chatController = {
                 ChatModel.find(findQuery)
                     .select('-_id -__v -chatRoom')
                     .sort('-createdOn') //Descending order
-                    // .skip(parseInt(req.query.skip) || 0)
-                    // .limit(10)
+                    .skip(parseInt(req.query.skip) || 0)
+                    .limit(10)
                     .exec()
                     .then((chats) => {
                         if (check.isEmpty(chats)) {
@@ -105,6 +105,7 @@ let chatController = {
                 }
 
                 let updateQuery = {
+                    delivered: true,
                     seen: true
                 }
 
@@ -114,15 +115,74 @@ let chatController = {
                     .exec()
                     .then((result) => {
                         if (result.n === 0) {
-                            logger.info('No Chat Found', 'chatController: modifyChat()');
+                            logger.info('No Chat Found', 'chatController: markUserChatFromSenderSeen(): modifyChat()');
                             reject(response.generate(true, 'No Chat Found', 404, null));
                         } else {
-                            logger.info('Chat Updated', 'chatController: modifyChat()');
+                            logger.info('Chat Updated', 'chatController: markUserChatFromSenderSeen(): modifyChat()');
                             resolve(result)
                         }
                     })
                     .catch((err) => {
-                        logger.error(err.message, 'chatController: modifyChat()', 10);
+                        logger.error(err.message, 'chatController: markUserChatFromSenderSeen(): modifyChat()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
+
+        //<--Local Functions End
+
+        validateParams()
+            .then(modifyChat)
+            .then((result) => {
+                res.send(response.generate(false, 'chat found and updated.', 200, result));
+            })
+            .catch((error) => {
+                res.send(error);
+            })
+    },
+
+    markUserChatFromSenderDelivered: (req, res) => {
+
+        //Local Function Start-->
+
+        let validateParams = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.chatId) || check.isEmpty(req.body.receiverId)) {
+                    logger.error('Parameters Missing', 'chatController: markUserChatFromSenderDelivered(): validateParams()', 9);
+                    reject(response.generate(true, 'parameters missing.', 403, null));
+                } else {
+                    logger.info('Parameters Validated', 'chatController: markUserChatFromSenderDelivered(): validateParams()', 9);
+                    resolve();
+                }
+            });
+        }
+
+        let modifyChat = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    chatId: req.body.chatId,
+                    receiverId: req.body.receiverId
+                }
+
+                let updateQuery = {
+                    delivered: true
+                }
+
+                ChatModel.update(findQuery, updateQuery, {
+                        multi: true //to update many
+                    })
+                    .exec()
+                    .then((result) => {
+                        if (result.n === 0) {
+                            logger.info('No Chat Found', 'chatController: markUserChatFromSenderDelivered(): modifyChat()');
+                            reject(response.generate(true, 'No Chat Found', 404, null));
+                        } else {
+                            logger.info('Chat Updated', 'chatController: markUserChatFromSenderDelivered(): modifyChat()');
+                            resolve(result)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatController: markUserChatFromSenderDelivered(): modifyChat()', 10);
                         reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
                     });
             });
@@ -219,8 +279,6 @@ let chatController = {
                 ChatModel.find(findQuery)
                     .select('-_id -__v')
                     .sort('-createdOn')
-                    .skip(parseInt(req.query.skip) || 0)
-                    .limit(10)
                     .exec()
                     .then((chats) => {
                         if (check.isEmpty(chats)) {

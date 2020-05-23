@@ -103,6 +103,7 @@ let setServer = (server) => {
 
                 if (user.data.userId == chatMessage.senderId) {
                     chatMessage['chatId'] = shortid.generate();
+                    myIo.emit("getChatId@" + data.authToken, chatMessage['chatId']);
                     console.log("Message received:" + chatMessage);
 
                     setTimeout(function() { //save chat after one second delay
@@ -143,6 +144,50 @@ let setServer = (server) => {
                         });
                 } else {
                     console.log("Somewhen tried to check typing status using " + data.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log(err);
+            });
+        });
+
+        socket.on('delivered', (data) => {
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.receiverId) {
+
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            myIo.emit('delivered@' + result[data.senderId], { chatId: data.chatId, receiverId: data.receiverId });
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to mark delivered status using " + data.receiverId + " id");
+                }
+            }).catch((err) => {
+                console.log(err);
+            });
+        });
+
+        socket.on('seen', (data) => {
+
+            console.log('Seen Message: ' + JSON.stringify(data));
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.receiverId) {
+
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            myIo.emit('seen@' + result[data.senderId], { chatIds: data.chatIds, receiverId: data.receiverId });
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to mark seen status using " + data.receiverId + " id");
                 }
             }).catch((err) => {
                 console.log(err);
