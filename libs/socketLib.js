@@ -99,7 +99,7 @@ let setServer = (server) => {
         socket.on('chat-msg', (data) => {
             let chatMessage = data.chatMessage;
 
-            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+            token.verifyTokenFromDatabase(data.authToken).then((user) => { //To check whether the user authToken exists
 
                 if (user.data.userId == chatMessage.senderId) {
                     chatMessage['chatId'] = shortid.generate();
@@ -125,7 +125,8 @@ let setServer = (server) => {
                     console.log("Somewhen tried to send message using " + chatMessage.senderId + " id");
                 }
             }).catch((err) => {
-                console.log(err);
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' })
             });
         });
 
@@ -147,7 +148,8 @@ let setServer = (server) => {
                     console.log("Somewhen tried to check typing status using " + data.senderId + " id");
                 }
             }).catch((err) => {
-                console.log(err);
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
             });
         });
 
@@ -169,7 +171,8 @@ let setServer = (server) => {
                     console.log("Somewhen tried to mark delivered status using " + data.receiverId + " id");
                 }
             }).catch((err) => {
-                console.log(err);
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
             });
         });
 
@@ -193,7 +196,8 @@ let setServer = (server) => {
                     console.log("Somewhen tried to mark seen status using " + data.receiverId + " id");
                 }
             }).catch((err) => {
-                console.log(err);
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
             });
         });
 

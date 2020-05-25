@@ -14,8 +14,7 @@ router.route('/single/seen/sender/mark').put(auth.isAuthorized, chatController.m
 
 router.route('/single/delivered/sender/mark').put(auth.isAuthorized, chatController.markUserChatFromSenderDelivered);
 
-router.route('/single/delivered/sender/mark/all')
-    .put(auth.isAuthorized, chatController.markAllUserChatFromSenderDelivered);
+router.route('/single/delivered/sender/mark/all').put(auth.isAuthorized, chatController.markAllUserChatFromSenderDelivered);
 
 router.route('/single/unseen/sender/count').get(auth.isAuthorized, chatController.countUserUnSeenChatFromSender);
 

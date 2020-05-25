@@ -3,11 +3,12 @@ const socket = io(baseUrl); // connecting with sockets.
 const authToken = getCookie("authToken");
 const userId = getCookie("userId");
 let userName = "";
-let initializationFlag = true;
 let skip = 0;
-//---------------------------------------------------------------------------------------------------------------
+
 $(document).ready(function() {
+
     //=======================================================================================================
+
     function initialize() {
 
         if (!authToken || !userId)
@@ -29,6 +30,38 @@ $(document).ready(function() {
 
         });
         //-------------------------------------------------
+        $("#logout").click(function() {
+            let object = {
+                userId: userId,
+                authToken: authToken
+            }
+            let json = JSON.stringify(object);
+            $.ajax({
+                type: 'POST', // Type of request to be send, called as method
+                url: `${baseUrl}/user/logout`, // Url to which the request is send
+                data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+                cache: false, // To unable request pages to be cached
+                contentType: 'application/json', // The content type used when sending data to the server.
+                processData: false, // To send DOMDocument or non processed data file it is set to false
+                success: function(response) { // A function to be called if request succeeds
+                    setCookie("userId", userId, -1); //Delete cookies
+                    setCookie("authToken", authToken, -1); //Delete cookies
+                    setCookie("name", userName, -1); //Delete cookies
+
+                    $("#txtToast").html(response.message);
+                    $('.toast').toast('show');
+                    setTimeout(function() {
+                        window.location.href = "index.html";
+                    }, 1500);
+                },
+                error: function(response) { // A function to be called if request failed
+                    console.error(response);
+                    $("#txtToast").html(response.message);
+                    $('.toast').toast('show'); //show response on toast
+                }
+            });
+        });
+        //-------------------------------------------------
         socket.on("online-user-list", (users) => {
 
             $(".sender").find(".sender-message-status").hide();
@@ -41,8 +74,8 @@ $(document).ready(function() {
             }
 
         });
-
-
+        //-------------------------------------------------
+        //Local Function-->
         let getUserInfo = () => {
             return new Promise((resolve, reject) => {
                 $.get(`${baseUrl}/user/${userId}`, { authToken: authToken },
@@ -50,7 +83,7 @@ $(document).ready(function() {
                         if (response.status == 200) {
                             let data = response.data;
                             userName = data.firstName + " " + data.lastName;
-                            $("#name").text(userName + " welcome to Incubchat");
+                            $("#name").text(userName);
                             resolve();
                         } else {
                             reject(`${baseUrl}/user/${userId} not working`);
@@ -207,25 +240,25 @@ $(document).ready(function() {
             });
         }
 
+        //-->Local Function
+
         getUserInfo()
             .then(getAllUsers)
             .then(marktUndeliveredChats)
             .then(getLastChat)
             .then(countUnseenChats)
             .then(() => {
-                $(".sender:not(#sender)").first().trigger('click');
-                initializationFlag = false;
                 console.log("Initialization Done.");
             })
             .catch((err) => {
                 console.log(err);
             });
-
     }
 
     initialize();
 
     //=======================================================================================================
+
     socket.on("receive@" + authToken, (data) => { //Message received
 
         let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender"); //get sender's element who's message came
@@ -393,41 +426,10 @@ $(document).ready(function() {
     });
 
     //-------------------------------------------------
-    $("#logout").click(function() {
-        let object = {
-            userId: userId,
-            authToken: authToken
-        }
-        let json = JSON.stringify(object);
-        $.ajax({
-            type: 'POST', // Type of request to be send, called as method
-            url: `${baseUrl}/user/logout`, // Url to which the request is send
-            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
-            cache: false, // To unable request pages to be cached
-            contentType: 'application/json', // The content type used when sending data to the server.
-            processData: false, // To send DOMDocument or non processed data file it is set to false
-            success: function(response) { // A function to be called if request succeeds
-                setCookie("userId", userId, -1); //Delete cookies
-                setCookie("authToken", authToken, -1); //Delete cookies
-                setCookie("name", userName, -1); //Delete cookies
-
-                $("#txtToast").html(response.message);
-                $('.toast').toast('show');
-                setTimeout(function() {
-                    window.location.href = "index.html";
-                }, 1500);
-            },
-            error: function(response) { // A function to be called if request failed
-                console.error(response);
-                $("#txtToast").html(response.message);
-                $('.toast').toast('show'); //show response on toast
-            }
-        });
-    });
-    //-------------------------------------------------
     $('body').on('click', '.sender', function() { //click event on each sender for dynamic elements
 
         $("#sendMessage").prop("hidden", false);
+        $("#welcome").hide();
         //Remove all others senders from active and current sender as active
         $(".sender").removeClass("active");
         $(this).addClass("active");
