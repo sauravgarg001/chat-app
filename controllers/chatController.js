@@ -218,7 +218,34 @@ let chatController = {
             });
         }
 
-        let modifyChat = () => {
+        let findUndeliveredChat = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    receiverId: req.body.userId,
+                    delivered: false
+                }
+
+                ChatModel.find(findQuery)
+                    .select('chatId senderId')
+                    .sort('senderId')
+                    .exec()
+                    .then((chats) => {
+                        if (check.isEmpty(chats)) {
+                            logger.info('No Undelivered Chat Found', 'chatController: markAllUserChatFromSenderDelivered(): findUndeliveredChat()');
+                            reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
+                        } else {
+                            logger.info('Undelivered Chat Found', 'chatController: markAllUserChatFromSenderDelivered(): findUndeliveredChat()');
+                            resolve(chats)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatController: markAllUserChatFromSenderDelivered(): findUndeliveredChat()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
+
+        let modifyChat = (chats) => {
             return new Promise((resolve, reject) => {
                 let findQuery = {
                     receiverId: req.body.userId,
@@ -239,7 +266,7 @@ let chatController = {
                             reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
                         } else {
                             logger.info('Undelivered Chat Updated', 'chatController: markAllUserChatFromSenderDelivered(): modifyChat()');
-                            resolve(result)
+                            resolve(chats)
                         }
                     })
                     .catch((err) => {
@@ -252,6 +279,7 @@ let chatController = {
         //<--Local Functions End
 
         validateParams()
+            .then(findUndeliveredChat)
             .then(modifyChat)
             .then((result) => {
                 res.send(response.generate(false, 'All Chat marked as delivered', 200, result));

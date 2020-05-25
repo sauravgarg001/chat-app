@@ -107,6 +107,30 @@ $(document).ready(function() {
                     success: function(response) { // A function to be called if request succeeds
                         if (response.status == 200) {
                             console.log(response.message);
+
+                            let undeliveredChats = response.data;
+                            if (undeliveredChats) {
+
+                                let senderId = undeliveredChats[0].senderId;
+                                let chatIds = Array();
+
+                                for (let i = 0; i < undeliveredChats.length; i++) {
+
+                                    chatIds.push(undeliveredChats[i].chatId);
+                                    if (senderId != undeliveredChats[i].senderId ||
+                                        i == undeliveredChats.length - 1) {
+                                        let query = {
+                                            chatIds: chatIds,
+                                            senderId: senderId,
+                                            authToken: authToken,
+                                            receiverId: userId
+                                        };
+                                        socket.emit("delivered", query);
+                                    }
+                                    chatIds = Array();
+                                }
+
+                            }
                             resolve();
                         } else {
                             reject(response.message);
@@ -171,7 +195,7 @@ $(document).ready(function() {
                         for (let i = 0; i < data.length; i++) {
                             if (data[i].count > 0) {
                                 let sender = $(`.sender .sender-id:contains(${data[i].senderId})`).parents(".sender");
-                                $(sender).find(".sender-unread-messages-count").text(count).show();
+                                $(sender).find(".sender-unread-messages-count").text(data[i].count).show();
                             }
                         }
                         console.log(`Unread Chat Found`);
@@ -401,17 +425,23 @@ $(document).ready(function() {
         });
     });
     //-------------------------------------------------
-    $('body').on('click', '.sender', function() { //for dynamic elements
+    $('body').on('click', '.sender', function() { //click event on each sender for dynamic elements
 
-        $("#unread-messages").hide();
         $("#sendMessage").prop("hidden", false);
+        //Remove all others senders from active and current sender as active
         $(".sender").removeClass("active");
-        $(".date:not(#date)").remove();
-        $(".message-sent-block:not(#message-sent-block)").remove();
-        $(".message-recieved-block:not(#message-recieved-block)").remove();
         $(this).addClass("active");
+        //Remove all dates
+        $(".date:not(#date)").remove();
+        //Remove all sent chats
+        $(".message-sent-block:not(#message-sent-block)").remove();
+        //Remove all recieved chats
+        $(".message-recieved-block:not(#message-recieved-block)").remove();
+        //Hide unread messages notification
+        $("#unread-messages").hide();
         $(this).find("sender-unread-messages-count").hide();
 
+        //Get current user name and id
         let id = $(this).find(".sender-id").text();
         let name = $(this).find(".sender-name").text();
 
@@ -432,11 +462,8 @@ $(document).ready(function() {
                         if (unseenChats) {
                             console.log("Unseen Chat Found");
                             let unseenMessages = Array();
-                            let undeliveredMessages = Array();
 
                             for (let i = 0; i < unseenChats.length; i++) {
-                                if (!unseenChats[i].delivered) //undelivered
-                                    undeliveredMessages.push(unseenChats[i].chatId);
                                 unseenMessages.push(unseenChats[i].chatId);
 
                                 let chatCreatedOn = formatDate(unseenChats[i].createdOn);
@@ -464,33 +491,20 @@ $(document).ready(function() {
 
                             }
 
-                            setUndeliveredMessagesInChatBox(undeliveredMessages, id);
                             setUnseenChatsInChatBox(unseenMessages, id);
 
-                            let lastChat = {
-                                createdOn: unseenChats[0].createdOn,
-                                message: unseenChats[0].message
-                            }
-
-                            let data = {
-                                lastChat: lastChat,
-                                date: date
-                            }
-                            resolve(data);
                         } else {
                             console.log("No Unseen Chat for " + name);
-                            let data = {
-                                lastChat: null,
-                                date: date
-                            }
-                            resolve(data);
                         }
+                        resolve(date);
+                    } else {
+                        reject(`${baseUrl}/chat/single/unseen/sender not working`);
                     }
                 });
             });
         }
 
-        let getSeenChats = (data) => { //Get all seen chat
+        let getSeenChats = (date) => { //Get all seen chat
             return new Promise((resolve, reject) => {
 
                 let query = {
@@ -499,12 +513,11 @@ $(document).ready(function() {
                     receiverId: userId,
                 };
 
-                skip = 10;
+                skip = 10; //skip last 10 chats when scrolling upwards
                 $.get(`${baseUrl}/chat/single/seen/sender`, query, function(response, status, xhr) {
 
                     if (response.status == 200) {
                         let seenChats = response.data;
-                        let date = data.date;
                         if (seenChats) {
                             console.log("Seen Chat Found");
                             for (let i = 0; i < seenChats.length; i++) {
@@ -567,69 +580,25 @@ $(document).ready(function() {
                                 }
                             }
 
-                            if (!data.lastChat) {
-                                data.lastChat = {
-                                    createdOn: seenChats[0].createdOn,
-                                    message: seenChats[0].message
-                                }
-                            }
-                            resolve(data.lastChat);
+                            resolve();
                         } else {
                             reject("No Seen Chat for " + name);
                         }
+                    } else {
+                        reject(`${baseUrl}/chat/single/seen/sender not working`);
                     }
 
                 }, "json");
             });
         }
 
-        let addMessageToUserlist = (lastChat) => {
-            return new Promise((resolve, reject) => {
-                //Add message to userlist
-                $(this).find(".sender-message").text(lastChat.message);
-                $(this).find(".sender-message-time").text(changeTo12Hour(lastChat.createdOn));
-                if (formatDate(lastChat.createdOn) == formatDate(new Date()))
-                    $(sender).find(".sender-message-date").text(" ");
-                else
-                    $(sender).find(".sender-message-date").text(formatDate(lastChat.createdOn));
-
-
-                //set user with latest message at first
-                setTimeout(function() {
-                    let msgSender = $(".sender:not(#sender)").first();
-                    let lastSenderId = $(".sender:not(#sender)").last().find(".sender-id").text()
-
-                    let msgSenderId = $(msgSender).find(".sender-id").text();
-                    let msgTime = $(msgSender).find(".sender-message-time").text();
-                    let msgDate = $(msgSender).find(".sender-message-date").text();
-
-
-                    //check cuurent user is first user or not
-                    if (msgSenderId != id && msgTime.trim() != "" && msgDate.trim() != "") {
-
-                        let currentUserChatTime = new Date(lastChat.createdOn).getTime();
-                        let firstUserChatTime = new Date(unformatDate(msgDate) + " " + change12HourTo24Hour(msgTime)).getTime();
-
-                        if (currentUserChatTime > firstUserChatTime) {
-                            let parent = $(sender).parent();
-                            let clone = $(sender).clone();
-                            $(sender).remove();
-                            $(parent).prepend($(clone));
-                        }
-
-                    }
-                }, 400); //end of Timeout
-                resolve();
-            });
-        }
-
-        let loadOldMessages = () => { //If there is no scroll
+        let loadOldMessages = () => { //If there is no vertical scrollbar load more messages if possible
             return new Promise((resolve, reject) => {
                 $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
-                if ($('#chatBox')[0].scrollTop == 0) { //check whether chatbox is already scroll up
+                if ($('#chatBox')[0].scrollTop == 0) { //check whether there is no vertical scrollbar showing
                     $('#chatBox').trigger("scroll");
                     setTimeout(function() {
-                        $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
+                        $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight); //set vertical scrollbar to bottom
                     }, 200);
                 }
                 resolve();
@@ -639,7 +608,6 @@ $(document).ready(function() {
 
         getUnseenChats()
             .then(getSeenChats)
-            .then(addMessageToUserlist)
             .then(loadOldMessages)
             .then(() => {
                 $("#no-message").hide()
@@ -659,22 +627,23 @@ $(document).ready(function() {
                 authToken: authToken,
                 senderId: senderId,
                 receiverId: userId,
-                skip: skip
+                skip: skip //number of chats to skip
             }
 
             $.get(`${baseUrl}/chat/single/seen/sender`, query, function(response, status, xhr) {
 
                 if (response.status == 200) {
-                    if (response.data) {
-                        let data = response.data;
-                        let date = $("#chatBox .date").first().text();
+                    let oldChats = response.data;
+                    if (oldChats) {
+
+                        let date = $("#chatBox .date").first().text(); //get topmost date value
                         if (date == "Today")
                             date = formatDate(new Date());
-                        $("#chatBox .date").first().remove();
+                        $("#chatBox .date").first().remove(); //remove top date
 
-                        for (let i = 0; i < data.length; i++) {
+                        for (let i = 0; i < oldChats.length; i++) {
 
-                            let chatDate = formatDate(data[i].createdOn);
+                            let chatDate = formatDate(oldChats[i].createdOn);
                             if (chatDate != date) {
 
                                 let parentDate = $("#date").parent();
@@ -688,36 +657,35 @@ $(document).ready(function() {
                                 date = chatDate;
                             }
 
-                            if (data[i].senderId == userId) {
+                            if (oldChats[i].senderId == userId) {
 
                                 let parent = $("#message-sent-block").parent();
                                 let message = $("#message-sent-block").clone();
-                                $(message).find(".message-sent").text(data[i].message);
-                                $(message).find(".message-sent-id").val(data[i].chatId);
-                                $(message).find(".time").text(changeTo12Hour(data[i].createdOn));
-                                if (data[i].seen)
+                                $(message).find(".message-sent").text(oldChats[i].message);
+                                $(message).find(".message-sent-id").val(oldChats[i].chatId);
+                                $(message).find(".time").text(changeTo12Hour(oldChats[i].createdOn));
+                                if (oldChats[i].seen)
                                     $(message).find(".status-seen").slideDown();
-                                else if (data[i].delivered)
+                                else if (oldChats[i].delivered)
                                     $(message).find(".status-delivered").slideDown();
                                 else
                                     $(message).find(".status-sent").slideDown();
                                 $(message).prop("hidden", false).prop("id", "");
                                 $(parent).prepend($(message));
-                                unseeninitializationFlag = false;
 
-                            } else if (data[i].receiverId == userId) {
+                            } else if (oldChats[i].receiverId == userId) {
 
                                 let parent = $("#message-recieved-block").parent();
                                 let message = $("#message-recieved-block").clone();
-                                $(message).find(".message-recieved").text(data[i].message);
-                                $(message).find(".message-recieved-id").val(data[i].chatId);
-                                $(message).find(".time").text(changeTo12Hour(data[i].createdOn));
+                                $(message).find(".message-recieved").text(oldChats[i].message);
+                                $(message).find(".message-recieved-id").val(oldChats[i].chatId);
+                                $(message).find(".time").text(changeTo12Hour(oldChats[i].createdOn));
                                 $(message).prop("hidden", false).prop("id", "");
                                 $(parent).prepend($(message));
 
                             }
 
-                            if (i == data.length - 1) {
+                            if (i == oldChats.length - 1) {
 
                                 let parentDate = $("#date").parent();
                                 let newDate = $("#date").clone();
@@ -730,11 +698,17 @@ $(document).ready(function() {
 
                             }
                         }
+
                         let newHeight = $('#chatBox')[0].scrollHeight;
-                        $('#chatBox').scrollTop(newHeight - oldHeight);
+                        $('#chatBox').scrollTop(newHeight - oldHeight); //set scroll postion to previous one
+
                         skip += 10;
+                    } else {
+                        console.log("No More Old Chats");
                     }
 
+                } else {
+                    console.log(`${baseUrl}/chat/single/seen/sender not working`);
                 }
 
             }, "json");
@@ -744,23 +718,23 @@ $(document).ready(function() {
 });
 //---------------------------------------------------------------------------------------------------------------
 function setUnseenChatsInChatBox(unseenMessages, id) {
-    if (unseenMessages.length != 0) {
-        let parent = $("#unread-messages").parent();
-        let element = $("#unread-messages");
-        let unreadMessages = $("#unread-messages").clone();
-        $(unreadMessages).find("#unread-messages-count").text(unseenMessages.length);
-        $(unreadMessages).show();
-        $(parent).prepend($(unreadMessages));
-        $(element).remove();
 
-        let query = {
-            chatIds: unseenMessages,
-            senderId: id,
-            authToken: authToken,
-            receiverId: userId
-        };
-        socket.emit("seen", query);
-    }
+    let parent = $("#unread-messages").parent();
+    let element = $("#unread-messages");
+    let unreadMessages = $("#unread-messages").clone();
+    $(unreadMessages).find("#unread-messages-count").text(unseenMessages.length);
+    $(unreadMessages).show();
+    $(parent).prepend($(unreadMessages));
+    $(element).remove();
+
+    let query = {
+        chatIds: unseenMessages,
+        senderId: id,
+        authToken: authToken,
+        receiverId: userId
+    };
+    socket.emit("seen", query);
+
     setTimeout(function() {
         $("#unread-messages").fadeOut();
         $("#unread-messages-count").text(0);
@@ -769,6 +743,7 @@ function setUnseenChatsInChatBox(unseenMessages, id) {
 
         markChatAsSeen(unseenMessages);
     }, 1000);
+
 }
 
 function markChatAsSeen(unseenMessages) {
@@ -797,6 +772,7 @@ function markChatAsSeen(unseenMessages) {
 }
 
 function setUndeliveredMessagesInChatBox(undeliveredMessages, id) {
+
     let query = {
         chatIds: undeliveredMessages,
         senderId: id,
@@ -807,6 +783,7 @@ function setUndeliveredMessagesInChatBox(undeliveredMessages, id) {
     setTimeout(function() {
         markChatAsDelivered(undeliveredMessages);
     }, 1000);
+
 }
 
 function markChatAsDelivered(undeliveredMessages) {
@@ -867,7 +844,7 @@ function change12HourTo24Hour(time) {
     return time;
 }
 
-function formatDate(date) {
+function formatDate(date) { //To dd/mm/yyyyy 
     let d = new Date(date)
     let month = '' + (d.getMonth() + 1)
     let day = '' + d.getDate()
