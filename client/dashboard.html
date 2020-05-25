@@ -211,7 +211,7 @@
                 <!-- .form-row starts -->
                 <div class="form-row">
                     <div class="col-md-12 py-2 mb-3 mb-md-5 border-bottom" style="height:82vh;overflow-y: auto;overflow-x: hidden;" id="chatBox">
-                        <center id="noMessage" hidden>
+                        <center id="no-message" style="display: none;">
                             <h5>No messages</h5>
                         </center>
                         <div class="form-row mt-3">
@@ -223,25 +223,25 @@
                             </center>
                             <div class="col-md-12 message-sent-block mb-2" id="message-sent-block" hidden>
 
+                                <input type="text" class="message-sent-id" hidden/>
+                                <div class="message-sent">Test Sent</div>
+                                <div class="text-muted time position-absolute " style="bottom: -0.65rem; right: 1.25rem;font-size: 0.65rem; ">&nbsp;</div>
+                                <div class="text-muted status-sent position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check"></i></div>
+                                <div class="text-muted status-delivered position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>
+                                <div class="text-primary status-seen position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>
+                                <!-- Tail -->
                                 <svg class="bi bi-play-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="var(--primary)" xmlns="http://www.w3.org/2000/svg" style="position: absolute;top: 0.12rem; right: -.2rem;">
                                     <path d=" M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z "></path>
                                 </svg>
-
-                                <div class="message-sent">Test Sent</div>
-                                <input type="text" class="message-sent-id" hidden>
-                                <small class="text-muted time position-absolute " style="bottom: -0.65rem; right: 1.25rem;font-size: 0.65rem; ">&nbsp;</small>
-                                <small class="text-muted status-sent position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check"></i></small>
-                                <small class="text-muted status-delivered position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></small>
-                                <small class="text-primary status-seen position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></small>
                             </div>
                             <div class="col-md-12 message-recieved-block mb-2 " id="message-recieved-block" hidden>
-
+                                <div class="message-recieved">Test Recieved</div>
+                                <input type="text" class="message-recieved-id" hidden/>
+                                <div class="text-muted time position-absolute " style="bottom: -0.65rem; left: 0;font-size: 0.65rem; ">&nbsp;</div>
+                                <!-- Tail -->
                                 <svg class="bi bi-play-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="var(--secondary)" xmlns="http://www.w3.org/2000/svg" style="position: absolute;top: 0.12rem; left: -.2rem;transform: rotate(180deg);">
                                     <path d=" M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z "></path>
                                 </svg>
-                                <div class="message-recieved">Test Recieved</div>
-                                <input type="text" class="message-recieved-id" hidden>
-                                <small class="text-muted time position-absolute " style="bottom: -0.65rem; left: 0;font-size: 0.65rem; ">&nbsp;</small>
                             </div>
                         </div>
                     </div>

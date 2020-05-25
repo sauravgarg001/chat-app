@@ -29,7 +29,7 @@ let setServer = (server) => {
         //scoket.on("<event name", <callback function>) -> listening to an event from client side
 
         socket.emit("verifyUser", "");
-
+        //-------------------------------------------------
         socket.on('set-user', (authToken, userId) => {
 
             console.log("set user called");
@@ -76,7 +76,7 @@ let setServer = (server) => {
                 });
         });
 
-
+        //-------------------------------------------------
         socket.on('disconnect', () => { // disconnect the user from socket
 
             console.log(`${socket.userId} is disconnected`);
@@ -95,7 +95,7 @@ let setServer = (server) => {
 
         });
 
-
+        //-------------------------------------------------
         socket.on('chat-msg', (data) => {
             let chatMessage = data.chatMessage;
 
@@ -116,7 +116,7 @@ let setServer = (server) => {
                         .then((result) => {
                             console.log(result[chatMessage.receiverId]);
 
-                            myIo.emit(result[chatMessage.receiverId], chatMessage);
+                            myIo.emit("receive@" + result[chatMessage.receiverId], chatMessage);
                         })
                         .catch((err) => {
                             console.log(err);
@@ -129,6 +129,7 @@ let setServer = (server) => {
             });
         });
 
+        //-------------------------------------------------
         socket.on('typing', (data) => {
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
@@ -150,6 +151,7 @@ let setServer = (server) => {
             });
         });
 
+        //-------------------------------------------------
         socket.on('delivered', (data) => {
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
@@ -158,7 +160,7 @@ let setServer = (server) => {
 
                     redis.getAllUsersInAHash('onlineUsers')
                         .then((result) => {
-                            myIo.emit('delivered@' + result[data.senderId], { chatId: data.chatId, receiverId: data.receiverId });
+                            myIo.emit('delivered@' + result[data.senderId], { chatIds: data.chatIds, receiverId: data.receiverId });
                         })
                         .catch((err) => {
                             console.log(err);
@@ -171,6 +173,7 @@ let setServer = (server) => {
             });
         });
 
+        //-------------------------------------------------
         socket.on('seen', (data) => {
 
             console.log('Seen Message: ' + JSON.stringify(data));
