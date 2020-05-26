@@ -259,6 +259,18 @@ $(document).ready(function() {
 
     //=======================================================================================================
 
+    $("#sender-search").on('keyup change', function() {
+        let text = $(this).val().toLowerCase();
+        $(".sender:not(#sender)").show();
+        $(".sender:not(#sender)").filter(function() {
+            if ($(this).find(".sender-name").text().toLowerCase().indexOf(text) == -1 &&
+                $(this).find(".sender-message").text().toLowerCase().indexOf(text) == -1)
+                return true;
+            else
+                return false;
+        }).hide();
+    });
+
     socket.on("auth-error@" + authToken, (jsonData) => {
 
         console.error(jsonData);
