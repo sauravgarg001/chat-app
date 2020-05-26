@@ -259,6 +259,19 @@ $(document).ready(function() {
 
     //=======================================================================================================
 
+    socket.on("auth-error@" + authToken, (jsonData) => {
+
+        console.error(jsonData);
+        setCookie("userId", userId, -1); //Delete cookies
+        setCookie("authToken", authToken, -1); //Delete cookies
+        setCookie("name", userName, -1); //Delete cookies
+
+        $("#txtToast").html(jsonData.error);
+        $('.toast').toast('show');
+        window.location.href = "index.html";
+
+    });
+
     socket.on("receive@" + authToken, (data) => { //Message received
 
         let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender"); //get sender's element who's message came

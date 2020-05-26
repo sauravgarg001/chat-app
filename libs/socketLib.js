@@ -47,24 +47,46 @@ let setServer = (server) => {
                     let key = currentUser.userId
                     let value = authToken
 
-                    redis.setANewOnlineUserInHash("onlineUsers", key, value)
-                        .then((res) => {
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
 
-                            redis.getAllUsersInAHash('onlineUsers')
-                                .then((result) => {
-                                    console.log(`${fullName} is online`);
+                            let timeout = 0;
 
-                                    // setting room name
-                                    socket.room = 'incubChat';
-                                    // joining chat-group room.
-                                    socket.join(socket.room);
-                                    socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
-                                    socket.emit('online-user-list', Object.keys(result));
+                            if (result[key]) { //check whether user is already logged somewhere
 
-                                })
-                                .catch((err) => {
-                                    console.log(err);
-                                });
+                                console.log(`${fullName} is already online`);
+                                myIo.emit('auth-error@' + result[key], { status: 500, error: 'Already logged somewhere' });
+                                timeout = 500;
+
+                            }
+
+                            setTimeout(function() {
+
+                                redis.setANewOnlineUserInHash("onlineUsers", key, value)
+                                    .then((res) => {
+
+                                        redis.getAllUsersInAHash('onlineUsers')
+                                            .then((result) => {
+                                                console.log(`${fullName} is online`);
+
+                                                // setting room name
+                                                socket.room = 'incubChat';
+                                                // joining chat-group room.
+                                                socket.join(socket.room);
+                                                socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
+                                                socket.emit('online-user-list', Object.keys(result));
+
+                                            })
+                                            .catch((err) => {
+                                                console.log(err);
+                                            });
+
+                                    })
+                                    .catch((err) => {
+                                        console.log(err);
+                                    });
+
+                            }, timeout);
 
                         })
                         .catch((err) => {

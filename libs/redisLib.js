@@ -13,6 +13,9 @@ let client = redis.createClient({
 
 client.on('connect', () => {
     console.log("Redis connection successfully opened");
+    client.flushdb(function(err, succeeded) {
+        console.log("Flushed Redis: " + succeeded);
+    });
 });
 
 

@@ -468,7 +468,8 @@ let chatController = {
                             "message": "$FIRST(message)",
                             "_id": 0
                         }
-                    }
+                    },
+                    { "$sort": { "createdOn": -1 } }
                 ];
 
                 ChatModel.aggregate(query)
