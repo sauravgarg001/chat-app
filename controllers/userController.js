@@ -13,6 +13,7 @@ const token = require('../libs/tokenLib');
 //Models
 const UserModel = mongoose.model('User');
 const AuthModel = mongoose.model('Auth');
+const SpamModel = mongoose.model('Spam');
 
 
 let userController = {
@@ -187,7 +188,230 @@ let userController = {
             });
     },
 
+    blockUser: (req, res) => {
+        //Local Function Start-->
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.userId)) {
+                    logger.error('Missing Field', 'userController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'userController: validateField()', 10);
+                    resolve(req.body.userId);
+                }
+            });
+        }
+
+        let findUserAndGetObjectId = (userId) => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.findOne({ userId: userId })
+                    .select('_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.error('No User Found', 'userController: findUserAndGetObjectId()', 7);
+                            reject(response.generate(true, 'No User Details Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'userController: findUserAndGetObjectId()', 10);
+                            resolve(user);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err, 'userController: findUserAndGetObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let addUserToBlocked = (user) => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.update({
+                        userId: req.user.userId,
+                    }, {
+                        $addToSet: {
+                            blocked: { user_id: user._id }
+                        }
+                    }, { upsert: true })
+                    .then((result) => {
+                        if (result.n == 1) {
+                            logger.info('User Blocked', 'userController: addUserToBlocked()', 10);
+                            resolve(response.generate(false, 'User Blocked', 200, null));
+                        } else {
+                            logger.error('User Unable to Block', 'userController: addUserToBlocked()', 10);
+                            resolve(response.generate(true, 'User unable to block', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err, 'userController: addUserToBlocked()', 10);
+                        reject(response.generate(true, 'Failed to block user', 500, null));
+                    });
+
+            });
+        }
+
+        //<--Local Functions End
+
+        validateField(req, res)
+            .then(findUserAndGetObjectId)
+            .then(addUserToBlocked)
+            .then((response) => {
+                res.status(200);
+                res.send(response);
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
+    spamUser: (req, res) => {
+
+        //Local Function Start-->
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.userId)) {
+                    logger.error('Missing Field', 'userController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'userController: validateField()', 10);
+                    resolve();
+                }
+            });
+        }
+
+        let getSpamUserObjectId = () => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.findOne({ userId: req.body.userId })
+                    .select('_id')
+                    .exec()
+                    .then((spamUser) => {
+                        if (check.isEmpty(spamUser)) {
+                            logger.error('No Spam User Found', 'userController: findUserAndGetObjectId()', 7);
+                            reject(response.generate(true, 'No User Details Found', 404, null));
+                        } else {
+                            logger.info('Spam User Found', 'userController: findUserAndGetObjectId()', 10);
+                            req.body["_id"] = spamUser._id;
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err, 'userController: findUserAndGetObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find spam user', 500, null));
+                    });
+            });
+        }
+
+        let addUserToBlocked = () => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.update({
+                        userId: req.user.userId
+                    }, {
+                        $addToSet: {
+                            blocked: { user_id: req.body._id }
+                        }
+                    }, { upsert: true })
+                    .then((result) => {
+                        if (result.n == 1) {
+                            logger.info('Spam User Blocked', 'userController: addUserToBlocked()', 10);
+                            resolve(response.generate(false, 'User Blocked', 200, null));
+                        } else {
+                            logger.error('Spam User Unable to Block', 'userController: addUserToBlocked()', 10);
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err, 'userController: addUserToBlocked()', 10);
+                        reject(response.generate(true, 'Failed to block user', 500, null));
+                    });
+
+            });
+        }
+
+        let getUserObjectId = () => {
+            return new Promise((resolve, reject) => {
+                UserModel.findOne({ userId: req.user.userId })
+                    .select('_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.error('No User Found', 'userController: getUserObjectId()', 7);
+                            reject(response.generate(true, 'No User Details Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'userController: getUserObjectId()', 10);
+                            req.user["_id"] = user._id;
+
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err, 'userController: getUserObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let updateUserInSpam = () => {
+            return new Promise((resolve, reject) => {
+
+                console.log("--------------Test----------------");
+                console.log(req.body._id);
+                console.log(req.user._id);
+                console.log("--------------End----------------");
+
+                SpamModel.update({
+                        user_id: req.body._id
+                    }, {
+                        $addToSet: {
+                            by: { user_id: req.user._id }
+                        },
+                        modifiedOn: time.now()
+                    }, { upsert: true }) //Insert if document not present
+                    .then((result) => {
+                        console.log(result);
+
+                        if (!check.isEmpty(result.upserted) || result.nModified != 0) {
+                            logger.info('User Spammed', 'userController: updateUserInSpam()', 10);
+                            resolve(response.generate(false, 'User spammed', 200, null));
+                        } else {
+                            logger.error('User Unable to Spam', 'userController: updateUserInSpam()', 10);
+                            resolve(response.generate(true, 'User unable to spam', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'userController: updateUserInSpam()', 10);
+                        reject(response.generate(true, 'Failed to spam user', 500, null));
+                    });
+
+            });
+        }
+
+        //<--Local Functions End
+
+        validateField(req, res)
+            .then(getSpamUserObjectId)
+            .then(addUserToBlocked)
+            .then(getUserObjectId)
+            .then(updateUserInSpam)
+            .then((response) => {
+                res.status(200);
+                res.send(response);
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
     logout: (req, res) => {
+
         AuthModel.findOneAndDelete({ userId: req.user.userId })
             .then((result) => {
                 if (check.isEmpty(result)) {
@@ -206,8 +430,9 @@ let userController = {
     },
 
     getUsers: (req, res) => {
+
         UserModel.find()
-            .select(' -__v -_id')
+            .select(' userId firstName lastName lastSeen')
             .exec()
             .then((users) => {
                 if (check.isEmpty(users)) {
@@ -226,7 +451,8 @@ let userController = {
     },
 
     getUser: (req, res) => {
-        UserModel.findOne({ 'userId': req.params.userId })
+
+        UserModel.findOne({ 'userId': req.user.userId })
             .select('-password -__v -_id')
             .exec()
             .then((user) => {
@@ -246,7 +472,8 @@ let userController = {
     },
 
     deleteUser: (req, res) => {
-        UserModel.findOneAndDelete({ 'userId': req.params.userId })
+
+        UserModel.findOneAndDelete({ 'userId': req.user.userId })
             .then((result) => {
                 if (check.isEmpty(result)) {
                     logger.info('No User Found', 'User Controller: deleteUser');
@@ -264,10 +491,11 @@ let userController = {
     },
 
     editUser: (req, res) => {
-        UserModel.findOneAndUpdate(req.params.userId, {
+
+        UserModel.findOneAndUpdate(req.user.userId, {
                 $set: req.body
             }, { new: true }) //To return updated document
-            //.update({ 'userId': req.params.userId }, req.body) //Alternative
+            //.update({ 'userId': req.user.userId }, req.body) //Alternative
             .then((user) => {
                 if (check.isEmpty(user)) {
                     logger.info('No User Found', 'User Controller: editUser');

@@ -7,7 +7,8 @@ let chatSchema = new Schema({
     chatId: {
         type: String,
         unique: true,
-        required: true
+        required: true,
+        index: true
     },
     senderName: {
         type: String,
@@ -15,7 +16,7 @@ let chatSchema = new Schema({
     },
     senderId: {
         type: String,
-        default: ''
+        required: true
     },
     receiverName: {
         type: String,
@@ -23,11 +24,11 @@ let chatSchema = new Schema({
     },
     receiverId: {
         type: String,
-        default: ''
+        required: true
     },
     message: {
         type: String,
-        default: ''
+        required: true
     },
     seen: {
         type: Boolean,

@@ -11,31 +11,26 @@
     <style>
          :root {
             --cyan: #20BEBE !important;
-            --blue: #16285C !important;
+            --dark: #343a40 !important;
+            --secondary: #6c757d !important;
         }
         
-        .btn-danger {
-            background-color: var( --cyan);
-            border-color: var( --cyan);
-        }
-        
-        .btn-danger:hover {
+        .btn-info:hover {
             background-color: var( --cyan);
             border-color: var( --cyan);
             cursor: pointer;
             opacity: 0.8;
         }
         
-        .btn-primary {
+        .btn-info,
+        .btn-outline-info:hover {
             background-color: var( --cyan);
             border-color: var( --cyan);
         }
         
-        .btn-primary:hover {
-            background-color: var( --cyan);
+        .btn-outline-info {
             border-color: var( --cyan);
-            cursor: pointer;
-            opacity: 0.8;
+            color: var(--cyan);
         }
         
         .time,
@@ -78,11 +73,11 @@
         }
         
         .sender .sender-img .img.h2 {
-            background-color: var( --dark);
+            background-color: var( --secondary);
         }
         
         .sender.active .sender-img .img.h2 {
-            background-color: var( --blue);
+            background-color: var( --dark);
         }
         
         .sender .sender-img {
@@ -112,6 +107,19 @@
             padding-bottom: 0rem !important;
         }
         
+        .sender-dropdown-menu-link {
+            display: none;
+            color: var(--secondary);
+        }
+        
+        .sender:hover .sender-dropdown-menu-link {
+            display: unset;
+        }
+        
+        .sender-dropdown-menu-link:hover {
+            color: var(--dark);
+        }
+        
         .message-recieved,
         .message-sent {
             padding-left: 0.5rem !important;
@@ -126,7 +134,7 @@
         
         .message-recieved {
             float: left !important;
-            background-color: var( --blue);
+            background-color: var( --dark);
         }
         
         .message-sent {
@@ -147,12 +155,12 @@
         
         .message-recieved::-moz-selection {
             /* Code for Firefox */
-            color: var( --blue);
+            color: var( --dark);
             background: white;
         }
         
         .message-recieved::selection {
-            color: var(--blue);
+            color: var(--dark);
             background: white;
         }
         
@@ -214,11 +222,12 @@
         <!-- .row starts -->
         <div class="row mt-3">
             <div class="col-lg-4 col-4 border border-primary offset-lg-1 border-right-0 p-0 rounded" style="height: 95vh;">
-                <input type="button" class="form-control btn-danger" id="logout" name="logout" value="Log  out">
+                <input type="button" class="form-control btn-info" id="logout" name="logout" value="Log  out">
                 <input type="text" class="form-control" style="font-family: FontAwesome;" id="sender-search" placeholder="&#xF002; Search">
                 <div id="sender-list">
                     <div class="card sender" id="sender" hidden>
                         <div class="row">
+                            <!-- Sender Template starts -->
                             <p class="sender-id" hidden></p>
                             <div class="col-lg-3 col-7 col-sm-5 col-md-4 sender-img">
                                 <div class="img h2 text-white">&nbsp;</div>
@@ -226,10 +235,23 @@
                             </div>
                             <div class="col-lg-9 col-12 sender-text">
                                 <div class="card-body">
-                                    <h5 class="card-title"><span class="sender-name">Name</span><small class="float-right sender-unread-messages-count text-success" style="display: none;">0</small></h5>
-                                    <div class="card-text sender-message">&nbsp;</div>
-                                    <div class="card-text sender-message-typing text-success" style="display: none;">typing...</div>
-
+                                    <h5 class="card-title">
+                                        <span class="sender-name">Name</span>
+                                        <!-- .sender-dropdown-menu starts -->
+                                        <span class="float-right sender-dropdown-menu-link" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            &nbsp;<i class="fas fa-chevron-circle-down"></i>
+                                        </span>
+                                        <div class="dropdown-menu sender-dropdown-menu">
+                                            <a class="dropdown-item sender-dropdown-block" href="#">Block user</a>
+                                            <a class="dropdown-item sender-dropdown-spam" href="#">Report spam</a>
+                                        </div>
+                                        <!-- .sender-dropdown-menu ends -->
+                                        <small class="float-right sender-unread-messages-count text-success" style="display: none;">0</small>
+                                    </h5>
+                                    <div class="card-text sender-message">
+                                        <span class="sender-message">&nbsp;</span>
+                                        <span class="sender-message-typing text-success" style="display: none;">typing...</span>
+                                    </div>
                                     <p class="card-text w-100">
                                         <small class="float-left sender-message-status text-success" style="display: none;"><i class="fas fa-circle"></i></small>
                                         <small class="text-muted float-right sender-message-time">&nbsp;</small>
@@ -238,6 +260,7 @@
                                     </p>
                                 </div>
                             </div>
+                            <!-- Sender Template ends -->
                         </div>
                     </div>
                 </div>
@@ -247,20 +270,26 @@
                 <div class="form-row">
 
                     <div class="col-md-12 py-2 mb-3 mb-md-5 border-bottom" style="height:82vh;overflow-y: auto;overflow-x: hidden;" id="chatBox">
+                        <!-- Welcome Screen starts -->
                         <div style="position: absolute;top: 30%;text-align: center; width: 100%;" id="welcome">
                             <img src="img/logo2.png" class="img-fluid">
                             <h2 style="color: var(--cyan);"> Welcome <span id="name">Test Name</span> to Incubchat</h2>
                         </div>
+                        <!-- Welcome Screen ends -->
+                        <!-- No Messages -->
                         <center id="no-message" style="display: none;">
                             <h5>No messages</h5>
                         </center>
                         <div class="form-row mt-3">
+                            <!-- Unread Messages -->
                             <center class="col-12 bg-dark text-white" id="unread-messages" style="display: none;">
                                 <span id="unread-messages-count">0</span> Unread Messages
                             </center>
+                            <!-- Date Template -->
                             <center class="date col-12" id="date" hidden>
                                 Date
                             </center>
+                            <!-- Message Sent Template starts -->
                             <div class="col-md-12 message-sent-block mb-2" id="message-sent-block" hidden>
 
                                 <input type="text" class="message-sent-id" hidden/>
@@ -274,15 +303,18 @@
                                     <path d=" M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z "></path>
                                 </svg>
                             </div>
+                            <!-- Message Sent Template ends -->
+                            <!-- Message Recieved Template starts -->
                             <div class="col-md-12 message-recieved-block mb-2 " id="message-recieved-block" hidden>
                                 <div class="message-recieved">Test Recieved</div>
                                 <input type="text" class="message-recieved-id" hidden/>
                                 <div class="text-muted time position-absolute " style="bottom: -0.65rem; left: 0;font-size: 0.65rem; ">&nbsp;</div>
                                 <!-- Tail -->
-                                <svg class="bi bi-play-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="var(--blue)" xmlns="http://www.w3.org/2000/svg" style="position: absolute;top: 0.12rem; left: -.2rem;transform: rotate(180deg);">
+                                <svg class="bi bi-play-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="var(--dark)" xmlns="http://www.w3.org/2000/svg" style="position: absolute;top: 0.12rem; left: -.2rem;transform: rotate(180deg);">
                                     <path d=" M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z "></path>
                                 </svg>
                             </div>
+                            <!-- Message Recieved Template ends -->
                         </div>
                     </div>
                 </div>
@@ -293,7 +325,7 @@
                         <input type="text " class="form-control rounded-pill " id="message" name="message " placeholder="Type a message " required>
                     </div>
                     <div class="col-md-2">
-                        <input type="button " class="form-control btn-primary rounded-pill btn-block btn" id="send" name="send" value="Send">
+                        <input type="button " class="form-control btn-outline-info rounded-pill btn-block btn" id="send" name="send" value="Send">
                     </div>
                 </div>
                 <!-- .form-row ends -->
@@ -318,15 +350,17 @@
 
     <script src="js/jquery-3.4.1.min.js " type="text/javascript"></script>
     <!-- links jquery-3.4.1.min.js -->
-    <script src="js/bootstrap.js " type="text/javascript "></script>
+    <script src="js/popper.min.js" type="text/javascript"></script>
+    <!-- links popper.min.js        -->
+    <script src="js/bootstrap.js " type="text/javascript"></script>
     <!-- links bootstrap.js        -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/js/all.min.js"></script>
     <!-- font awesome 5 -->
     <script src="js/cookie.js" type="text/javascript"></script>
     <!-- links cookie.js        -->
-    <script src="js/socket.io.js "></script>
+    <script src="js/socket.io.js"></script>
     <!-- links socket.io client library-->
-    <script src="js/dashboard.js "></script>
+    <script src="js/dashboard.js"></script>
     <!-- links dashboard.js -->
 
     <!-- Templates -->

@@ -1,9 +1,23 @@
 const mongoose = require('mongoose');
 
+let blockedSubSchema = new mongoose.Schema({
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
+}, { _id: false });
+
+let groupSubSchema = new mongoose.Schema({
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Group'
+    }
+}, { _id: false });
+
 let userSchema = new mongoose.Schema({
     userId: {
         type: String,
-        default: '',
+        required: true,
         index: true,
         unique: true
     },
@@ -29,9 +43,18 @@ let userSchema = new mongoose.Schema({
         default: 0,
         unique: true
     },
+    blocked: [blockedSubSchema],
+    groups: [groupSubSchema],
+    lastSeen: {
+        type: Date
+    },
     createdOn: {
         type: Date,
-        default: ""
+        default: Date.now
+    },
+    modifiedOn: {
+        type: Date,
+        default: Date.now
     }
 });
 

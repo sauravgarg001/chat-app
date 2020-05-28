@@ -36,6 +36,8 @@ app.use(express.static(path.join(__dirname, 'client')));
 const UserModel = require('./models/User');
 const AuthModel = require('./models/Auth');
 const ChatModel = require('./models/Chat');
+const SpamModel = require('./models/Spam');
+const GroupModel = require('./models/Group');
 
 //Routes
 const indexRouter = require('./routes/index');

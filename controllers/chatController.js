@@ -476,7 +476,7 @@ let chatController = {
                     .then((chats) => {
                         if (check.isEmpty(chats)) {
                             logger.info('No Chat Found', 'chatControllerr: findDistinctSenderLastChat()', 10);
-                            reject(response.generate(true, 'No Unseen Chat User Found', 404, null));
+                            reject(response.generate(true, 'No Unseen Chat User Found', 200, null));
                         } else {
                             logger.info('Chat Found', 'chatControllerr: findDistinctSenderLastChat()', 10);
                             resolve(chats);

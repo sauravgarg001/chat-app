@@ -78,7 +78,7 @@ $(document).ready(function() {
         //Local Function-->
         let getUserInfo = () => {
             return new Promise((resolve, reject) => {
-                $.get(`${baseUrl}/user/${userId}`, { authToken: authToken },
+                $.get(`${baseUrl}/user/`, { authToken: authToken },
                     function(response, status, xhr) {
                         if (response.status == 200) {
                             let data = response.data;
@@ -86,7 +86,7 @@ $(document).ready(function() {
                             $("#name").text(userName);
                             resolve();
                         } else {
-                            reject(`${baseUrl}/user/${userId} not working`);
+                            reject(`${baseUrl}/user/ not working`);
                         }
                     },
                     "json");
@@ -96,7 +96,7 @@ $(document).ready(function() {
 
         let getAllUsers = () => {
             return new Promise((resolve, reject) => {
-                $.get(`${baseUrl}/user`, { authToken: authToken },
+                $.get(`${baseUrl}/user/all`, { authToken: authToken },
                     function(response, status, xhr) {
                         if (response.status == 200) {
                             let data = response.data;
@@ -451,7 +451,7 @@ $(document).ready(function() {
     });
 
     //-------------------------------------------------
-    $('body').on('click', '.sender', function() { //click event on each sender for dynamic elements
+    $('body').on('click', '.sender', function(e) { //click event on each sender for dynamic elements
 
         $("#sendMessage").prop("hidden", false);
         $("#welcome").hide();
@@ -741,7 +741,56 @@ $(document).ready(function() {
             }, "json");
         }
     });
+    //-------------------------------------------------
+    $('body').on('click', '.sender-dropdown-spam', function(e) {
+        let id = $(this).parents(".sender").find(".sender-id").text();
+        //Send API
+        let object = {
+            userId: id,
+            authToken: authToken
+        }
+        let json = JSON.stringify(object);
 
+        $.ajax({
+            type: 'PUT', // Type of request to be send, called as method
+            url: `${baseUrl}/user/spam`, // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                console.info(response.message);
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+            }
+        });
+    });
+    //-------------------------------------------------
+    $('body').on('click', '.sender-dropdown-block', function(e) {
+        let id = $(this).parents(".sender").find(".sender-id").text();
+        //Send API
+        let object = {
+            userId: id,
+            authToken: authToken
+        }
+        let json = JSON.stringify(object);
+
+        $.ajax({
+            type: 'PUT', // Type of request to be send, called as method
+            url: `${baseUrl}/user/block`, // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                console.info(response.message);
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+            }
+        });
+    });
 });
 //---------------------------------------------------------------------------------------------------------------
 function setUnseenChatsInChatBox(unseenMessages, id) {
