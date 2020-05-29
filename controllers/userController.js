@@ -59,7 +59,7 @@ let userController = {
                         resolve(user.toObject());
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: createUser', 10);
+                        logger.error(err.message, 'userController: createUser', 10);
                         reject(response.generate(true, 'Failed to create user', 403, null));
                     });
 
@@ -99,7 +99,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: findUser()', 10);
+                        logger.error(err.message, 'userController: findUser()', 10);
                         reject(response.generate(true, 'Failed to find user', 500, null));
                     });
             });
@@ -124,7 +124,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: validatePassword()', 10);
+                        logger.error(err.message, 'userController: validatePassword()', 10);
                         reject(response.generate(true, 'Login Failed', 500, null));
                     });
             });
@@ -140,7 +140,7 @@ let userController = {
                         resolve(tokenDetails);
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: generateToken()', 10);
+                        logger.error(err.message, 'userController: generateToken()', 10);
                         reject(response.generate(true, 'Failed To Generate Token', 500, null));
                     });
             });
@@ -164,7 +164,7 @@ let userController = {
                         resolve(responseBody);
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: saveToken()', 10);
+                        logger.error(err.message, 'userController: saveToken()', 10);
                         req.user = { userId: tokenDetails.userId };
                         userController.logout(req, res);
                         reject(response.generate(true, 'Failed you may be login somewhere else, Try Again!', 500, null));
@@ -219,7 +219,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: findUserAndGetObjectId()', 10);
+                        logger.error(err.message, 'userController: findUserAndGetObjectId()', 10);
                         reject(response.generate(true, 'Failed to find user', 500, null));
                     });
             });
@@ -245,7 +245,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: addUserToBlocked()', 10);
+                        logger.error(err.message, 'userController: addUserToBlocked()', 10);
                         reject(response.generate(true, 'Failed to block user', 500, null));
                     });
 
@@ -257,6 +257,86 @@ let userController = {
         validateField(req, res)
             .then(findUserAndGetObjectId)
             .then(addUserToBlocked)
+            .then((response) => {
+                res.status(200);
+                res.send(response);
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
+    unblockUser: (req, res) => {
+        //Local Function Start-->
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.userId)) {
+                    logger.error('Missing Field', 'userController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'userController: validateField()', 10);
+                    resolve(req.body.userId);
+                }
+            });
+        }
+
+        let findUserAndGetObjectId = (userId) => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.findOne({ userId: userId })
+                    .select('_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.error('No User Found', 'userController: findUserAndGetObjectId()', 7);
+                            reject(response.generate(true, 'No User Details Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'userController: findUserAndGetObjectId()', 10);
+                            resolve(user);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'userController: findUserAndGetObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let removeUserFromBlocked = (user) => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.update({
+                        userId: req.user.userId,
+                    }, {
+                        $pull: {
+                            blocked: { user_id: user._id }
+                        }
+                    }, { upsert: true })
+                    .then((result) => {
+                        if (result.n == 1) {
+                            logger.info('User Unblocked', 'userController: removeUserFromBlocked()', 10);
+                            resolve(response.generate(false, 'User Unblocked', 200, null));
+                        } else {
+                            logger.error('User Unable to Unblock', 'userController: removeUserFromBlocked()', 10);
+                            resolve(response.generate(true, 'User unable to unblock', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'userController: removeUserFromBlocked()', 10);
+                        reject(response.generate(true, 'Failed to unblock user', 500, null));
+                    });
+
+            });
+        }
+
+        //<--Local Functions End
+
+        validateField(req, res)
+            .then(findUserAndGetObjectId)
+            .then(removeUserFromBlocked)
             .then((response) => {
                 res.status(200);
                 res.send(response);
@@ -301,7 +381,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: findUserAndGetObjectId()', 10);
+                        logger.error(err.message, 'userController: findUserAndGetObjectId()', 10);
                         reject(response.generate(true, 'Failed to find spam user', 500, null));
                     });
             });
@@ -327,7 +407,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: addUserToBlocked()', 10);
+                        logger.error(err.message, 'userController: addUserToBlocked()', 10);
                         reject(response.generate(true, 'Failed to block user', 500, null));
                     });
 
@@ -351,7 +431,7 @@ let userController = {
                         }
                     })
                     .catch((err) => {
-                        logger.error(err, 'userController: getUserObjectId()', 10);
+                        logger.error(err.message, 'userController: getUserObjectId()', 10);
                         reject(response.generate(true, 'Failed to find user', 500, null));
                     });
             });
@@ -359,11 +439,6 @@ let userController = {
 
         let updateUserInSpam = () => {
             return new Promise((resolve, reject) => {
-
-                console.log("--------------Test----------------");
-                console.log(req.body._id);
-                console.log(req.user._id);
-                console.log("--------------End----------------");
 
                 SpamModel.update({
                         user_id: req.body._id
@@ -423,7 +498,7 @@ let userController = {
                 }
             })
             .catch((err) => {
-                logger.error(err, 'user Controller: logout', 10);
+                logger.error(err.message, 'user Controller: logout', 10);
                 res.status(err.status);
                 res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
             });
@@ -431,29 +506,90 @@ let userController = {
 
     getUsers: (req, res) => {
 
-        UserModel.find()
-            .select(' userId firstName lastName lastSeen')
-            .exec()
-            .then((users) => {
-                if (check.isEmpty(users)) {
-                    logger.info('No User Found', 'User Controller: getUsers');
-                    res.send(response.generate(true, 'No User Found', 404, null));
-                } else {
-                    logger.info('Users Found', 'User Controller: getUsers');
-                    res.send(response.generate(false, 'All User Details Found', 200, users));
-                }
+        let getUserObjectId = () => {
+            return new Promise((resolve, reject) => {
+                UserModel.findOne({ userId: req.user.userId })
+                    .select('_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.error('No User Found', 'userController: getUserObjectId()', 7);
+                            reject(response.generate(true, 'No User Details Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'userController: getUserObjectId()', 10);
+                            req.user["_id"] = user._id;
+
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'userController: getUserObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let getUnspammedUsers = () => {
+            return new Promise((resolve, reject) => {
+                UserModel.aggregate([{
+                            $lookup: {
+                                from: "spams",
+                                localField: "_id",
+                                foreignField: "user_id",
+                                as: "spam"
+                            }
+                        },
+                        {
+                            $match: {
+                                "spam.by.user_id": {
+                                    $ne: req.user._id
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                userId: 1,
+                                firstName: 1,
+                                lastName: 1,
+                                lastSeen: 1,
+                                _id: 0
+                            }
+                        }
+                    ])
+                    .then((users) => {
+                        if (check.isEmpty(users)) {
+                            logger.info('No User Found', 'User Controller: getUnspammedUsers');
+                            reject(response.generate(true, 'No User Found', 404, null));
+                        } else {
+                            logger.info('Users Found', 'User Controller: getUnspammedUsers');
+                            resolve(response.generate(false, 'All User Details Found', 200, users));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'User Controller: getUnspammedUsers', 10);
+                        reject(response.generate(true, 'Failed To Find User Details', 500, null));
+                    });
+            });
+        }
+
+
+        getUserObjectId()
+            .then(getUnspammedUsers)
+            .then((response) => {
+                res.status(200);
+                res.send(response);
             })
             .catch((err) => {
-                logger.error(err, 'User Controller: getUsers', 10);
                 res.status(err.status);
-                res.send(response.generate(true, 'Failed To Find User Details', 500, null));
+                res.send(err);
             });
     },
 
     getUser: (req, res) => {
 
         UserModel.findOne({ 'userId': req.user.userId })
-            .select('-password -__v -_id')
+            .populate('blocked.user_id', 'userId -_id')
+            .select('firstName lastName groups blocked.user_id.userId')
             .exec()
             .then((user) => {
                 if (check.isEmpty(user)) {

@@ -69,30 +69,15 @@ $(document).ready(function() {
                 for (let id of users) {
                     if (userId == id)
                         continue;
-                    $(`.sender .sender-id:contains(${id})`).parent().find(".sender-message-status").show();
+                    let sender = $(`.sender .sender-id:contains(${id})`).parents(".sender");
+                    $(sender).find(".sender-message-status").show();
+                    $(sender).find(".sender-last-seen").hide();
                 }
             }
 
         });
         //-------------------------------------------------
         //Local Function-->
-        let getUserInfo = () => {
-            return new Promise((resolve, reject) => {
-                $.get(`${baseUrl}/user/`, { authToken: authToken },
-                    function(response, status, xhr) {
-                        if (response.status == 200) {
-                            let data = response.data;
-                            userName = data.firstName + " " + data.lastName;
-                            $("#name").text(userName);
-                            resolve();
-                        } else {
-                            reject(`${baseUrl}/user/ not working`);
-                        }
-                    },
-                    "json");
-            });
-        };
-
 
         let getAllUsers = () => {
             return new Promise((resolve, reject) => {
@@ -109,6 +94,14 @@ $(document).ready(function() {
                                 $(sender).find(".sender-name").text(data[i].firstName + " " + data[i].lastName);
                                 $(sender).find(".sender-id").text(data[i].userId);
                                 $(sender).find(".sender-img .img").text(data[i].firstName[0] + data[i].lastName[0]);
+                                if ($(sender).find(".sender-message-status").css("display") == "none" && data[i].lastSeen) {
+                                    if (formatDate(data[i].lastSeen) == formatDate(new Date()))
+                                        $(sender).find(".sender-last-seen-text").text(changeTo12Hour(data[i].lastSeen));
+                                    else
+                                        $(sender).find(".sender-last-seen-text").text(changeTo12Hour(data[i].lastSeen) + " " + formatDate(data[i].createdOn));
+                                } else {
+                                    $(sender).find(".sender-last-seen").hide();
+                                }
                                 $(sender).prop("hidden", false).prop("id", "");
                                 $(parent).append($(sender));
                             }
@@ -117,6 +110,33 @@ $(document).ready(function() {
                             reject(`${baseUrl}/user not working`);
                         }
                     }, "json");
+            });
+        };
+
+        let getUserInfo = () => {
+            return new Promise((resolve, reject) => {
+                $.get(`${baseUrl}/user/`, { authToken: authToken },
+                    function(response, status, xhr) {
+
+                        if (response.status == 200) {
+                            let data = response.data;
+                            userName = data.firstName + " " + data.lastName;
+                            $("#name").text(userName);
+
+                            for (let i = 0; i < data.blocked.length; i++) {
+                                let id = data.blocked[i].user_id.userId;
+                                let sender = $(`.sender .sender-id:contains(${id})`).parents(".sender");
+                                $(sender).find('.sender-dropdown-block').hide();
+                                $(sender).find('.sender-dropdown-unblock').show();
+                                $(sender).find('.sender-blocked').show();
+                                $(sender).addClass('blocked');
+                            }
+                            resolve();
+                        } else {
+                            reject(`${baseUrl}/user/ not working`);
+                        }
+                    },
+                    "json");
             });
         };
 
@@ -242,8 +262,8 @@ $(document).ready(function() {
 
         //-->Local Function
 
-        getUserInfo()
-            .then(getAllUsers)
+        getAllUsers()
+            .then(getUserInfo)
             .then(marktUndeliveredChats)
             .then(getLastChat)
             .then(countUnseenChats)
@@ -270,7 +290,7 @@ $(document).ready(function() {
                 return false;
         }).hide();
     });
-
+    //-------------------------------------------------
     socket.on("auth-error@" + authToken, (jsonData) => {
 
         console.error(jsonData);
@@ -283,7 +303,18 @@ $(document).ready(function() {
         window.location.href = "index.html";
 
     });
+    //-------------------------------------------------
+    socket.on("last-seen", (user) => {
+        let sender = $(`.sender .sender-id:contains(${user.userId})`).parents(".sender");
+        $(sender).find(".sender-message-status").hide();
+        if (formatDate(user.lastSeen) == formatDate(new Date()))
+            $(sender).find(".sender-last-seen-text").text(changeTo12Hour(user.lastSeen));
+        else
+            $(sender).find(".sender-last-seen-text").text(changeTo12Hour(user.lastSeen) + " " + formatDate(user.createdOn));
+        $(sender).find(".sender-last-seen").show();
 
+    });
+    //-------------------------------------------------
     socket.on("receive@" + authToken, (data) => { //Message received
 
         let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender"); //get sender's element who's message came
@@ -453,7 +484,16 @@ $(document).ready(function() {
     //-------------------------------------------------
     $('body').on('click', '.sender', function(e) { //click event on each sender for dynamic elements
 
-        $("#sendMessage").prop("hidden", false);
+        let blocked = false;
+        if ($(this).hasClass("blocked")) {
+            blocked = true;
+            $("#block-message").prop("hidden", false);
+            $("#send-message").prop("hidden", true);
+        } else {
+            $("#send-message").prop("hidden", false);
+            $("#block-message").prop("hidden", true);
+        }
+
         $("#welcome").hide();
         //Remove all others senders from active and current sender as active
         $(".sender").removeClass("active");
@@ -476,58 +516,61 @@ $(document).ready(function() {
             return new Promise((resolve, reject) => {
 
                 let date = formatDate(new Date()); //Today's Date
+                if (blocked)
+                    resolve(date);
+                else {
+                    let query = {
+                        authToken: authToken,
+                        senderId: id,
+                        receiverId: userId,
+                    };
+                    $.get(`${baseUrl}/chat/single/unseen/sender`, query, function(response, status, xhr) {
 
-                let query = {
-                    authToken: authToken,
-                    senderId: id,
-                    receiverId: userId,
-                };
-                $.get(`${baseUrl}/chat/single/unseen/sender`, query, function(response, status, xhr) {
+                        if (response.status == 200) {
+                            let unseenChats = response.data;
+                            if (unseenChats) {
+                                console.log("Unseen Chat Found");
+                                let unseenMessages = Array();
 
-                    if (response.status == 200) {
-                        let unseenChats = response.data;
-                        if (unseenChats) {
-                            console.log("Unseen Chat Found");
-                            let unseenMessages = Array();
+                                for (let i = 0; i < unseenChats.length; i++) {
+                                    unseenMessages.push(unseenChats[i].chatId);
 
-                            for (let i = 0; i < unseenChats.length; i++) {
-                                unseenMessages.push(unseenChats[i].chatId);
+                                    let chatCreatedOn = formatDate(unseenChats[i].createdOn);
+                                    if (chatCreatedOn != date) {
 
-                                let chatCreatedOn = formatDate(unseenChats[i].createdOn);
-                                if (chatCreatedOn != date) {
+                                        let parentDate = $("#date").parent();
+                                        let newDate = $("#date").clone();
+                                        $(newDate).prop("hidden", false).prop("id", "");
+                                        if (date == formatDate(new Date()))
+                                            $(newDate).text("Today");
+                                        else
+                                            $(newDate).text(date);
+                                        $(parentDate).prepend($(newDate));
+                                        date = chatCreatedOn;
+                                    }
 
-                                    let parentDate = $("#date").parent();
-                                    let newDate = $("#date").clone();
-                                    $(newDate).prop("hidden", false).prop("id", "");
-                                    if (date == formatDate(new Date()))
-                                        $(newDate).text("Today");
-                                    else
-                                        $(newDate).text(date);
-                                    $(parentDate).prepend($(newDate));
-                                    date = chatCreatedOn;
+                                    //Adding unread message to chatbox
+                                    let parent = $("#message-recieved-block").parent();
+                                    let message = $("#message-recieved-block").clone();
+                                    $(message).find(".message-recieved").text(unseenChats[i].message);
+                                    $(message).find(".message-recieved-id").val(unseenChats[i].chatId);
+                                    $(message).find(".time").text(changeTo12Hour(unseenChats[i].createdOn));
+                                    $(message).prop("hidden", false).prop("id", "");
+                                    $(parent).prepend($(message));
+
                                 }
 
-                                //Adding unread message to chatbox
-                                let parent = $("#message-recieved-block").parent();
-                                let message = $("#message-recieved-block").clone();
-                                $(message).find(".message-recieved").text(unseenChats[i].message);
-                                $(message).find(".message-recieved-id").val(unseenChats[i].chatId);
-                                $(message).find(".time").text(changeTo12Hour(unseenChats[i].createdOn));
-                                $(message).prop("hidden", false).prop("id", "");
-                                $(parent).prepend($(message));
+                                setUnseenChatsInChatBox(unseenMessages, id);
 
+                            } else {
+                                console.log("No Unseen Chat for " + name);
                             }
-
-                            setUnseenChatsInChatBox(unseenMessages, id);
-
+                            resolve(date);
                         } else {
-                            console.log("No Unseen Chat for " + name);
+                            reject(`${baseUrl}/chat/single/unseen/sender not working`);
                         }
-                        resolve(date);
-                    } else {
-                        reject(`${baseUrl}/chat/single/unseen/sender not working`);
-                    }
-                });
+                    });
+                }
             });
         }
 
@@ -743,7 +786,8 @@ $(document).ready(function() {
     });
     //-------------------------------------------------
     $('body').on('click', '.sender-dropdown-spam', function(e) {
-        let id = $(this).parents(".sender").find(".sender-id").text();
+        let sender = $(this).parents(".sender");
+        let id = $(sender).find(".sender-id").text();
         //Send API
         let object = {
             userId: id,
@@ -760,6 +804,7 @@ $(document).ready(function() {
             processData: false, // To send DOMDocument or non processed data file it is set to false
             success: function(response) { // A function to be called if request succeeds
                 console.info(response.message);
+                $(sender).remove();
             },
             error: function(response) { // A function to be called if request failed
                 console.error(response);
@@ -768,7 +813,8 @@ $(document).ready(function() {
     });
     //-------------------------------------------------
     $('body').on('click', '.sender-dropdown-block', function(e) {
-        let id = $(this).parents(".sender").find(".sender-id").text();
+        let sender = $(this).parents(".sender");
+        let id = $(sender).find(".sender-id").text();
         //Send API
         let object = {
             userId: id,
@@ -785,6 +831,44 @@ $(document).ready(function() {
             processData: false, // To send DOMDocument or non processed data file it is set to false
             success: function(response) { // A function to be called if request succeeds
                 console.info(response.message);
+                $(sender).find('.sender-dropdown-block').hide();
+                $(sender).find('.sender-dropdown-unblock').show();
+                $(sender).find('.sender-blocked').show();
+                $(sender).addClass('blocked');
+                if ($(sender).hasClass('active'))
+                    $(sender).trigger('click');
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+            }
+        });
+    });
+    //-------------------------------------------------
+    $('body').on('click', '.sender-dropdown-unblock', function(e) {
+        let sender = $(this).parents(".sender");
+        let id = $(sender).find(".sender-id").text();
+        //Send API
+        let object = {
+            userId: id,
+            authToken: authToken
+        }
+        let json = JSON.stringify(object);
+
+        $.ajax({
+            type: 'PUT', // Type of request to be send, called as method
+            url: `${baseUrl}/user/unblock`, // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                console.info(response.message);
+                $(sender).find('.sender-dropdown-unblock').hide();
+                $(sender).find('.sender-blocked').hide();
+                $(sender).find('.sender-dropdown-block').show();
+                $(sender).removeClass('blocked');
+                if ($(sender).hasClass('active'))
+                    $(sender).trigger('click');
             },
             error: function(response) { // A function to be called if request failed
                 console.error(response);

@@ -221,9 +221,11 @@
     <div class="container">
         <!-- .row starts -->
         <div class="row mt-3">
-            <div class="col-lg-4 col-4 border border-primary offset-lg-1 border-right-0 p-0 rounded" style="height: 95vh;">
-                <input type="button" class="form-control btn-info" id="logout" name="logout" value="Log  out">
-                <input type="text" class="form-control" style="font-family: FontAwesome;" id="sender-search" placeholder="&#xF002; Search">
+            <div class="col-lg-4 col-4 border border-primary offset-lg-1 border-right-0 p-0 rounded" style="height: 95vh;overflow-y: auto;overflow-x: hidden;">
+                <div class="sticky-top">
+                    <input type="button" class="form-control btn-info " id="logout" name="logout" value="Log  out">
+                    <input type="text" class="form-control " style="font-family: FontAwesome;" id="sender-search" placeholder="&#xF002; Search">
+                </div>
                 <div id="sender-list">
                     <div class="card sender" id="sender" hidden>
                         <div class="row">
@@ -243,10 +245,12 @@
                                         </span>
                                         <div class="dropdown-menu sender-dropdown-menu">
                                             <a class="dropdown-item sender-dropdown-block" href="#">Block user</a>
+                                            <a class="dropdown-item sender-dropdown-unblock" href="#" style="display: none;">Unbock user</a>
                                             <a class="dropdown-item sender-dropdown-spam" href="#">Report spam</a>
                                         </div>
                                         <!-- .sender-dropdown-menu ends -->
                                         <small class="float-right sender-unread-messages-count text-success" style="display: none;">0</small>
+                                        <small class="float-right sender-blocked text-danger" style="display: none;"><i class="fas fa-ban"></i></small>
                                     </h5>
                                     <div class="card-text sender-message">
                                         <span class="sender-message">&nbsp;</span>
@@ -254,6 +258,7 @@
                                     </div>
                                     <p class="card-text w-100">
                                         <small class="float-left sender-message-status text-success" style="display: none;"><i class="fas fa-circle"></i></small>
+                                        <small class="float-left sender-last-seen text-success"><i class="fas fa-check-double"></i><span class="sender-last-seen-text">&nbsp;</span></small>
                                         <small class="text-muted float-right sender-message-time">&nbsp;</small>
                                         <small class="float-right">&nbsp;</small>
                                         <small class="text-muted float-right sender-message-date">&nbsp;</small>
@@ -320,12 +325,19 @@
                 </div>
                 <!-- .form-row ends -->
                 <!-- .form-row starts -->
-                <div class="form-row " id="sendMessage" hidden>
+                <div class="form-row" id="send-message" hidden>
                     <div class="col-md-10 ">
                         <input type="text " class="form-control rounded-pill " id="message" name="message " placeholder="Type a message " required>
                     </div>
                     <div class="col-md-2">
                         <input type="button " class="form-control btn-outline-info rounded-pill btn-block btn" id="send" name="send" value="Send">
+                    </div>
+                </div>
+                <!-- .form-row ends -->
+                <!-- .form-row starts -->
+                <div class="form-row" id="block-message" hidden>
+                    <div class="col-md-10">
+                        <center class="h5 text-danger">Can't send meesage, User is Blocked</center>
                     </div>
                 </div>
                 <!-- .form-row ends -->

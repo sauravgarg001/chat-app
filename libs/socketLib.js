@@ -9,9 +9,11 @@ const eventEmitter = new events.EventEmitter();
 const token = require("./tokenLib");
 const redis = require("./redisLib");
 const check = require("./checkLib");
+const time = require("./timeLib");
 
 //Models
 const ChatModel = mongoose.model('Chat');
+const UserModel = mongoose.model('User');
 
 //Middlewares
 const auth = require('../middlewares/auth');
@@ -102,6 +104,10 @@ let setServer = (server) => {
         socket.on('disconnect', () => { // disconnect the user from socket
 
             console.log(`${socket.userId} is disconnected`);
+            let userData = {
+                userId: socket.userId,
+                lastSeen: time.now()
+            }
 
             if (socket.userId) {
                 redis.deleteUserFromHash('onlineUsers', socket.userId);
@@ -109,6 +115,13 @@ let setServer = (server) => {
                     .then((result) => {
                         socket.leave(socket.room) // unsubscribe the user from his own channel
                         socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
+
+                        setTimeout(function() { //save lastSeen after one second delay
+
+                            eventEmitter.emit('save-last-seen', userData);
+
+                        }, 1000);
+                        socket.to(socket.room).broadcast.emit('last-seen', userData);
                     })
                     .catch((err) => {
                         console.log(err);
@@ -252,6 +265,23 @@ eventEmitter.on('save-chat', (data) => {
                 console.error("Chat is not saved");
             } else {
                 console.info("Chat saved");
+            }
+        })
+        .catch((err) => {
+            console.error(`Error occurred: ${err}`);
+        });
+
+});
+
+// Saving lastSeen of user to database.
+eventEmitter.on('save-last-seen', (data) => {
+
+    UserModel.update({ userId: data.userId }, { lastSeen: data.lastSeen })
+        .then((result) => {
+            if (result.n == 0) {
+                console.error("Last seen is not saved");
+            } else {
+                console.info("Last seen saved");
             }
         })
         .catch((err) => {
