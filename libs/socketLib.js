@@ -15,9 +15,6 @@ const time = require("./timeLib");
 const ChatModel = mongoose.model('Chat');
 const UserModel = mongoose.model('User');
 
-//Middlewares
-const auth = require('../middlewares/auth');
-
 
 let setServer = (server) => {
 

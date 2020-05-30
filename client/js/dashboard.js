@@ -98,13 +98,23 @@ $(document).ready(function() {
                                     if (formatDate(data[i].lastSeen) == formatDate(new Date()))
                                         $(sender).find(".sender-last-seen-text").text(changeTo12Hour(data[i].lastSeen));
                                     else
-                                        $(sender).find(".sender-last-seen-text").text(changeTo12Hour(data[i].lastSeen) + " " + formatDate(data[i].createdOn));
+                                        $(sender).find(".sender-last-seen-text").text(formatDate(data[i].lastSeen) + " " + changeTo12Hour(data[i].lastSeen));
                                 } else {
                                     $(sender).find(".sender-last-seen").hide();
                                 }
                                 $(sender).prop("hidden", false).prop("id", "");
                                 $(parent).append($(sender));
+
+                                let userParent = $("#user").parent();
+                                let user = $("#user").clone();
+                                $(user).find(".user-name").text(data[i].firstName + " " + data[i].lastName);
+                                $(user).find(".user-id").text(data[i].userId);
+                                $(user).find(".user-img .img").text(data[i].firstName[0] + data[i].lastName[0]);
+                                $(user).prop("hidden", false).prop("id", "");
+                                $(userParent).append($(user));
+
                             }
+
                             resolve();
                         } else {
                             reject(`${baseUrl}/user not working`);
@@ -130,6 +140,9 @@ $(document).ready(function() {
                                 $(sender).find('.sender-dropdown-unblock').show();
                                 $(sender).find('.sender-blocked').show();
                                 $(sender).addClass('blocked');
+
+                                let user = $(`.user .user-id:contains(${id})`).parents(".user");
+                                $(user).find('.user-blocked').show();
                             }
                             resolve();
                         } else {
@@ -310,7 +323,7 @@ $(document).ready(function() {
         if (formatDate(user.lastSeen) == formatDate(new Date()))
             $(sender).find(".sender-last-seen-text").text(changeTo12Hour(user.lastSeen));
         else
-            $(sender).find(".sender-last-seen-text").text(changeTo12Hour(user.lastSeen) + " " + formatDate(user.createdOn));
+            $(sender).find(".sender-last-seen-text").text(formatDate(user.lastSeen) + " " + changeTo12Hour(user.lastSeen));
         $(sender).find(".sender-last-seen").show();
 
     });
@@ -837,6 +850,9 @@ $(document).ready(function() {
                 $(sender).addClass('blocked');
                 if ($(sender).hasClass('active'))
                     $(sender).trigger('click');
+
+                let user = $(`.user .user-id:contains(${id})`).parents(".user");
+                $(user).find('.user-blocked').show();
             },
             error: function(response) { // A function to be called if request failed
                 console.error(response);
@@ -869,6 +885,9 @@ $(document).ready(function() {
                 $(sender).removeClass('blocked');
                 if ($(sender).hasClass('active'))
                     $(sender).trigger('click');
+
+                let user = $(`.user .user-id:contains(${id})`).parents(".user");
+                $(user).find('.user-blocked').hide();
             },
             error: function(response) { // A function to be called if request failed
                 console.error(response);

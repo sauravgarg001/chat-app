@@ -89,6 +89,7 @@ let userController = {
             return new Promise((resolve, reject) => {
 
                 UserModel.findOne({ email: req.body.email })
+                    .populate('blocked.user_id', 'userId -_id')
                     .then((user) => {
                         if (check.isEmpty(user)) {
                             logger.error('No User Found', 'userController: findUser()', 7);
