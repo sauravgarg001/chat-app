@@ -117,7 +117,7 @@ $(document).ready(function() {
 
                             resolve();
                         } else {
-                            reject(`${baseUrl}/user not working`);
+                            reject(`${baseUrl}/user/all not working`);
                         }
                     }, "json");
             });
@@ -247,6 +247,47 @@ $(document).ready(function() {
             });
         }
 
+        let getAllGroups = () => {
+            return new Promise((resolve, reject) => {
+                $.get(`${baseUrl}/group/all`, { authToken: authToken },
+                    function(response, status, xhr) {
+
+                        if (response.status == 200) {
+                            let data = response.data;
+
+                            for (let i = 0; i < data.length; i++) {
+
+                                let parent = $("#sender").parent();
+                                let sender = $("#sender").clone();
+                                $(sender).find(".sender-name").text(data[i].name);
+                                $(sender).find(".sender-id").text(data[i].groupId);
+                                $(sender).find(".sender-last-seen").hide();
+
+                                let name = data[i].name.toUpperCase().split(' ');
+                                let firstName = name[0];
+                                let lastName = name[1] ? name[1] : ' ';
+                                $(sender).find(".sender-img .img").text(firstName[0] + lastName[0]);
+
+                                $(sender).find(".sender-message").text(data[i].message);
+                                $(sender).find(".sender-message-time").text(changeTo12Hour(data[i].createdOn));
+                                if (formatDate(data[i].createdOn) == formatDate(new Date()))
+                                    $(sender).find(".sender-message-date").text(" ");
+                                else
+                                    $(sender).find(".sender-message-date").text(formatDate(data[i].createdOn));
+
+                                $(sender).prop("hidden", false).prop("id", "");
+                                $(parent).append($(sender));
+
+                            }
+
+                            resolve();
+                        } else {
+                            reject(`${baseUrl}/group/all not working`);
+                        }
+                    }, "json");
+            });
+        };
+
 
         let countUnseenChats = () => {
             return new Promise((resolve, reject) => {
@@ -279,6 +320,7 @@ $(document).ready(function() {
             .then(getUserInfo)
             .then(marktUndeliveredChats)
             .then(getLastChat)
+            .then(getAllGroups)
             .then(countUnseenChats)
             .then(() => {
                 console.log("Initialization Done.");
@@ -893,26 +935,6 @@ $(document).ready(function() {
                 console.error(response);
             }
         });
-    });
-    //-------------------------------------------------
-    $('body').on('click', '.user', function(e) {
-        $(this).find(".user-selected").toggle();
-    });
-    //-------------------------------------------------
-    $("#user-search").on('keyup change', function() {
-        let text = $(this).val().toLowerCase();
-        $(".user:not(#user)").show();
-        $(".user:not(#user)").filter(function() {
-            if ($(this).find(".user-name").text().toLowerCase().indexOf(text) == -1 &&
-                $(this).find(".user-selected").css("display") == "none")
-                return true;
-            else
-                return false;
-        }).hide();
-    });
-    //-------------------------------------------------
-    $('body').on('click', '#create-group', function(e) {
-        alert("Clicked create group");
     });
 });
 //---------------------------------------------------------------------------------------------------------------

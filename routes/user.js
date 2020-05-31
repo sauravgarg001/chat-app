@@ -25,7 +25,7 @@ router.route('/all').get(auth.isAuthorized, userController.getUsers);
 router.route('/')
     .get(auth.isAuthorized, userController.getUser)
     //   .put(auth.isAuthorized, userController.editUser)
-    .delete(auth.isAuthorized, userController.deleteUser);
+    //   .delete(auth.isAuthorized, userController.deleteUser);
 
 
 module.exports = router;

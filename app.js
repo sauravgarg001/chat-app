@@ -43,9 +43,11 @@ const GroupModel = require('./models/Group');
 const indexRouter = require('./routes/index');
 const userRouter = require('./routes/user');
 const chatRouter = require('./routes/chat');
+const groupRouter = require('./routes/group');
 app.use('/', indexRouter);
 app.use('/user', userRouter);
 app.use('/chat', chatRouter);
+app.use('/group', groupRouter);
 
 
 //Mongoose connection
