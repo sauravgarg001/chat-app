@@ -894,6 +894,26 @@ $(document).ready(function() {
             }
         });
     });
+    //-------------------------------------------------
+    $('body').on('click', '.user', function(e) {
+        $(this).find(".user-selected").toggle();
+    });
+    //-------------------------------------------------
+    $("#user-search").on('keyup change', function() {
+        let text = $(this).val().toLowerCase();
+        $(".user:not(#user)").show();
+        $(".user:not(#user)").filter(function() {
+            if ($(this).find(".user-name").text().toLowerCase().indexOf(text) == -1 &&
+                $(this).find(".user-selected").css("display") == "none")
+                return true;
+            else
+                return false;
+        }).hide();
+    });
+    //-------------------------------------------------
+    $('body').on('click', '#create-group', function(e) {
+        alert("Clicked create group");
+    });
 });
 //---------------------------------------------------------------------------------------------------------------
 function setUnseenChatsInChatBox(unseenMessages, id) {
