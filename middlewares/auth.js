@@ -25,7 +25,10 @@ let isAuthorized = (req, res, next) => {
                     token.verifyToken(auth.authToken, auth.tokenSecret)
                         .then((decoded) => {
                             logger.info('authToken Verfied', 'Authorization Middleware', 10);
-                            req.user = { userId: decoded.data.userId }
+                            req.user = {
+                                userId: decoded.data.userId,
+                                userName: `${decoded.data.firstName} ${decoded.data.lastName}`
+                            }
                             next();
                         })
                         .catch((err) => {

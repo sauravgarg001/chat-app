@@ -87,7 +87,7 @@ let chatController = {
 
         let validateParams = () => {
             return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.body.chatIds) || check.isEmpty(req.body.receiverId)) {
+                if (check.isEmpty(req.body.chatIds)) {
                     logger.error('Parameters Missing', 'chatController: markUserChatSeen(): validateParams()', 9);
                     reject(response.generate(true, 'parameters missing.', 403, null));
                 } else {
@@ -101,7 +101,7 @@ let chatController = {
             return new Promise((resolve, reject) => {
                 let findQuery = {
                     chatId: { $in: req.body.chatIds },
-                    receiverId: req.body.receiverId,
+                    receiverId: req.user.userId,
                     seen: false
                 }
 
@@ -148,7 +148,7 @@ let chatController = {
 
         let validateParams = () => {
             return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.body.chatIds) || check.isEmpty(req.body.receiverId)) {
+                if (check.isEmpty(req.body.chatIds)) {
                     logger.error('Parameters Missing', 'chatController: markUserChatDelivered(): validateParams()', 9);
                     reject(response.generate(true, 'parameters missing.', 403, null));
                 } else {
@@ -162,7 +162,7 @@ let chatController = {
             return new Promise((resolve, reject) => {
                 let findQuery = {
                     chatId: { $in: req.body.chatIds },
-                    receiverId: req.body.receiverId,
+                    receiverId: req.user.userId,
                     delivered: false
                 }
 
@@ -206,22 +206,10 @@ let chatController = {
 
         //Local Function Start-->
 
-        let validateParams = () => {
-            return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.body.userId)) {
-                    logger.error('Parameters Missing', 'chatController: markAllUserChatDelivered(): validateParams()', 9);
-                    reject(response.generate(true, 'parameters missing.', 403, null));
-                } else {
-                    logger.info('Parameters Validated', 'chatController: markAllUserChatDelivered(): validateParams()', 9);
-                    resolve();
-                }
-            });
-        }
-
         let findUndeliveredChat = () => {
             return new Promise((resolve, reject) => {
                 let findQuery = {
-                    receiverId: req.body.userId,
+                    receiverId: req.user.userId,
                     delivered: false
                 }
 
@@ -248,7 +236,7 @@ let chatController = {
         let modifyChat = (chats) => {
             return new Promise((resolve, reject) => {
                 let findQuery = {
-                    receiverId: req.body.userId,
+                    receiverId: req.user.userId,
                     delivered: false
                 }
 
@@ -278,8 +266,7 @@ let chatController = {
 
         //<--Local Functions End
 
-        validateParams()
-            .then(findUndeliveredChat)
+        findUndeliveredChat()
             .then(modifyChat)
             .then((result) => {
                 res.send(response.generate(false, 'All Chat marked as delivered', 200, result));
@@ -291,71 +278,42 @@ let chatController = {
 
     countUserUnSeenChat: (req, res) => {
 
-        //Local Function Start-->
-
-        let validateParams = () => {
-            return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.query.userId)) {
-                    logger.error('Parameters Missing', 'chatController: countUserUnSeenChat(): validateParams()', 9);
-                    reject(response.generate(true, 'parameters missing.', 403, null));
-                } else {
-                    logger.info('Parameters Validted', 'chatController: countUserUnSeenChat(): validateParams()', 9);
-                    resolve();
+        let query = [{
+                "$match": {
+                    "receiverId": req.user.userId,
+                    "seen": false
                 }
-            });
-        }
-
-
-        let countChat = () => {
-            return new Promise((resolve, reject) => {
-
-                let query = [{
-                        "$match": {
-                            "receiverId": req.query.userId,
-                            "seen": false
-                        }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "senderId": "$senderId"
                     },
-                    {
-                        "$group": {
-                            "_id": {
-                                "senderId": "$senderId"
-                            },
-                            "count": {
-                                $sum: 1
-                            }
-                        }
-                    },
-                    {
-                        "$project": {
-                            "senderId": "$_id.senderId",
-                            "count": "$count",
-                            "_id": 0
-                        }
+                    "count": {
+                        $sum: 1
                     }
-                ];
+                }
+            },
+            {
+                "$project": {
+                    "senderId": "$_id.senderId",
+                    "count": "$count",
+                    "_id": 0
+                }
+            }
+        ];
 
-                ChatModel.aggregate(query)
-                    .then((result) => {
-                        logger.info("Unseen Chat Count Found", 'chatController: countUserUnSeenChat(): countChat()', 10);
-                        resolve(result);
-                    })
-                    .catch((err) => {
-                        logger.error(err.message, 'chatController: countUserUnSeenChat(): countChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-                    });
-            });
-        }
-
-        //<--Local Functions End
-
-        validateParams()
-            .then(countChat)
+        ChatModel.aggregate(query)
             .then((result) => {
+                logger.info("Unseen Chat Count Found", 'chatController: countUserUnSeenChat()', 10);
                 res.send(response.generate(false, 'unseen chat count found.', 200, result))
+
             })
-            .catch((error) => {
-                res.send(error)
+            .catch((err) => {
+                logger.error(err.message, 'chatController: countUserUnSeenChat()', 10);
+                res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
             });
+
     },
 
     getUserUnSeenChat: (req, res) => {
@@ -364,7 +322,7 @@ let chatController = {
 
         let validateParams = () => {
             return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.query.senderId) || check.isEmpty(req.query.receiverId)) {
+                if (check.isEmpty(req.query.senderId)) {
                     logger.error('Parameters Missing', 'chatController: getUserUnSeenChat(): validateParams()', 9);
                     reject(response.generate(true, 'parameters missing.', 403, null));
                 } else {
@@ -379,7 +337,7 @@ let chatController = {
 
                 let findQuery = {
                     senderId: req.query.senderId,
-                    receiverId: req.query.receiverId,
+                    receiverId: req.user.userId,
                     seen: false
                 };
 
@@ -417,88 +375,58 @@ let chatController = {
 
     getUserLastChats: (req, res) => {
 
-        //Local Function Start-->
-
-        let validateParams = () => {
-            return new Promise((resolve, reject) => {
-                if (check.isEmpty(req.query.userId)) {
-                    logger.error('Parameters Missing', 'chatControllerr: getUserLastChats(): validateParams()', 9);
-                    reject(response.generate(true, 'parameters missing.', 403, null));
-                } else {
-                    logger.info('Parameters Validated', 'chatControllerr: getUserLastChats(): validateParams()', 9);
-                    resolve();
+        let query = [{
+                "$match": {
+                    "$or": [{
+                            "senderId": req.user.userId
+                        },
+                        {
+                            "receiverId": req.user.userId
+                        }
+                    ]
                 }
-            });
-        }
-
-        let findDistinctSenderLastChat = () => {
-
-            return new Promise((resolve, reject) => {
-                let query = [{
-                        "$match": {
-                            "$or": [{
-                                    "senderId": req.query.userId
-                                },
-                                {
-                                    "receiverId": req.query.userId
-                                }
-                            ]
+            },
+            { "$sort": { "createdOn": -1 } },
+            {
+                "$group": {
+                    "_id": {
+                        "senderId": {
+                            $cond: { if: { $eq: ["$senderId", req.user.userId] }, then: "$receiverId", else: "$senderId" }
                         }
                     },
-                    { "$sort": { "createdOn": -1 } },
-                    {
-                        "$group": {
-                            "_id": {
-                                "senderId": {
-                                    $cond: { if: { $eq: ["$senderId", req.query.userId] }, then: "$receiverId", else: "$senderId" }
-                                }
-                            },
-                            "MAX(createdOn)": {
-                                "$max": "$createdOn"
-                            },
-                            "FIRST(message)": {
-                                "$first": "$message"
-                            }
-                        }
+                    "MAX(createdOn)": {
+                        "$max": "$createdOn"
                     },
-                    {
-                        "$project": {
-                            "senderId": "$_id.senderId",
-                            "createdOn": "$MAX(createdOn)",
-                            "message": "$FIRST(message)",
-                            "_id": 0
-                        }
-                    },
-                    { "$sort": { "createdOn": -1 } }
-                ];
+                    "FIRST(message)": {
+                        "$first": "$message"
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "senderId": "$_id.senderId",
+                    "createdOn": "$MAX(createdOn)",
+                    "message": "$FIRST(message)",
+                    "_id": 0
+                }
+            },
+            { "$sort": { "createdOn": -1 } }
+        ];
 
-                ChatModel.aggregate(query)
-                    .then((chats) => {
-                        if (check.isEmpty(chats)) {
-                            logger.info('No Chat Found', 'chatControllerr: findDistinctSenderLastChat()', 10);
-                            reject(response.generate(true, 'No Unseen Chat User Found', 200, null));
-                        } else {
-                            logger.info('Chat Found', 'chatControllerr: findDistinctSenderLastChat()', 10);
-                            resolve(chats);
-                        }
-                    })
-                    .catch((err) => {
-                        logger.error(err.message, 'chatControllerr: findDistinctSenderLastChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-                    });
-
-            });
-        }
-
-        //<--Local Functions End
-
-        validateParams()
-            .then(findDistinctSenderLastChat)
+        ChatModel.aggregate(query)
             .then((chats) => {
-                res.send(response.generate(false, 'chat found and listed.', 200, chats));
+                if (check.isEmpty(chats)) {
+                    logger.info('No Chat Found', 'chatControllerr: getUserLastChats()', 10);
+                    res.send(response.generate(true, 'No Unseen Chat User Found', 200, null));
+                } else {
+                    logger.info('Chat Found', 'chatControllerr: getUserLastChats()', 10);
+                    res.send(response.generate(false, 'chat found and listed.', 200, chats));
+
+                }
             })
-            .catch((error) => {
-                res.send(error)
+            .catch((err) => {
+                logger.error(err.message, 'chatControllerr: getUserLastChats()', 10);
+                res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
             });
     }
 

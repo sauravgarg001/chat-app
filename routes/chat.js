@@ -31,13 +31,13 @@ router.route('/group/seen').get(auth.isAuthorized, groupController.getGroupSeenC
 
 // router.route('/group/delivered/mark').put(auth.isAuthorized, groupController.markGroupChatAsDelivered);
 
-// router.route('/group/delivered/mark/all').put(auth.isAuthorized, groupController.markGroupAllChatAsDelivered);
+router.route('/group/delivered/mark/all').put(auth.isAuthorized, groupController.markAllGroupChatDelivered);
 
-// router.route('/group/unseen/count').get(auth.isAuthorized, groupController.countGroupUnseenChats);
+router.route('/group/unseen/count').get(auth.isAuthorized, groupController.countGroupUnSeenChat);
 
 // router.route('/group/unseen').get(auth.isAuthorized, groupController.getGroupUnseenChat);
 
-// router.route('/group/lastchat').get(auth.isAuthorized, groupController.getGroupLastChats);
+router.route('/group/lastchat').get(auth.isAuthorized, groupController.getGroupLastChats);
 
 
 module.exports = router;

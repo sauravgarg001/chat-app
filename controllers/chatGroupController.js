@@ -7,6 +7,7 @@ const check = require('../libs/checkLib');
 
 //Models
 const ChatModel = mongoose.model('GroupChat');
+const UserModel = mongoose.model('User');
 
 
 let chatGroupController = {
@@ -98,426 +99,462 @@ let chatGroupController = {
             });
     },
 
-    // markGroupChatSeen: (req, res) => {
+    markGroupChatSeen: (req, res) => {
 
-    //     //Local Function Start-->
+        //Local Function Start-->
 
-    //     let validateParams = () => {
-    //         return new Promise((resolve, reject) => {
-    //             if (check.isEmpty(req.body.chatIds) || check.isEmpty(req.body.receiverId)) {
-    //                 logger.error('Parameters Missing', 'chatGroupController: markGroupChatSeen(): validateParams()', 9);
-    //                 reject(response.generate(true, 'parameters missing.', 403, null));
-    //             } else {
-    //                 logger.info('Parameters Validated', 'chatGroupController: markGroupChatSeen(): validateParams()', 9);
-    //                 resolve();
-    //             }
-    //         });
-    //     }
+        let validateParams = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.chatIds)) {
+                    logger.error('Parameters Missing', 'chatGroupController: markGroupChatSeen(): validateParams()', 9);
+                    reject(response.generate(true, 'parameters missing.', 403, null));
+                } else {
+                    logger.info('Parameters Validated', 'chatGroupController: markGroupChatSeen(): validateParams()', 9);
+                    resolve();
+                }
+            });
+        }
 
-    //     let modifyChat = () => {
-    //         return new Promise((resolve, reject) => {
-    //             let findQuery = {
-    //                 chatId: { $in: req.body.chatIds },
-    //                 receiverId: req.body.receiverId,
-    //                 seen: false
-    //             }
+        let modifyChat = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    chatId: { $in: req.body.chatIds }
+                }
 
-    //             let updateQuery = {
-    //                 delivered: true,
-    //                 seen: true
-    //             }
+                let updateQuery = {
+                    $addToSet: {
+                        receiver: {
+                            receiverId: req.user.userId,
+                            receiverName: req.user.userName,
+                            delivered: true,
+                            seen: true
+                        }
+                    }
+                }
 
-    //             ChatModel.update(findQuery, updateQuery, {
-    //                     multi: true //to update many
-    //                 })
-    //                 .exec()
-    //                 .then((result) => {
-    //                     if (result.n === 0) {
-    //                         logger.info('No Chat Found', 'chatGroupController: markGroupChatSeen(): modifyChat()');
-    //                         reject(response.generate(true, 'No Chat Found', 404, null));
-    //                     } else {
-    //                         logger.info('Chat Updated', 'chatGroupController: markGroupChatSeen(): modifyChat()');
-    //                         resolve(result)
-    //                     }
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatGroupController: markGroupChatSeen(): modifyChat()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
-    //         });
-    //     }
+                ChatModel.update(findQuery, updateQuery, {
+                        multi: true, //to update many
+                        upsert: true
+                    })
+                    .exec()
+                    .then((result) => {
+                        if (result.n === 0) {
+                            logger.info('No Chat Found', 'chatGroupController: markGroupChatSeen(): modifyChat()');
+                            reject(response.generate(true, 'No Chat Found', 404, null));
+                        } else {
+                            logger.info('Chat Updated', 'chatGroupController: markGroupChatSeen(): modifyChat()');
+                            resolve(result)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: markGroupChatSeen(): modifyChat()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //     //<--Local Functions End
+        //<--Local Functions End
 
-    //     validateParams()
-    //         .then(modifyChat)
-    //         .then((result) => {
-    //             res.send(response.generate(false, 'Chat marked as seen', 200, result));
-    //         })
-    //         .catch((error) => {
-    //             res.send(error);
-    //         })
-    // },
+        validateParams()
+            .then(modifyChat)
+            .then((result) => {
+                res.send(response.generate(false, 'Chat marked as seen', 200, result));
+            })
+            .catch((error) => {
+                res.send(error);
+            })
+    },
 
-    // markGroupChatDelivered: (req, res) => {
+    markGroupChatDelivered: (req, res) => {
 
-    //     //Local Function Start-->
+        //Local Function Start-->
 
-    //     let validateParams = () => {
-    //         return new Promise((resolve, reject) => {
-    //             if (check.isEmpty(req.body.chatIds) || check.isEmpty(req.body.receiverId)) {
-    //                 logger.error('Parameters Missing', 'chatGroupController: markGroupChatDelivered(): validateParams()', 9);
-    //                 reject(response.generate(true, 'parameters missing.', 403, null));
-    //             } else {
-    //                 logger.info('Parameters Validated', 'chatGroupController: markGroupChatDelivered(): validateParams()', 9);
-    //                 resolve();
-    //             }
-    //         });
-    //     }
+        let validateParams = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.chatIds)) {
+                    logger.error('Parameters Missing', 'chatGroupController: markGroupChatDelivered(): validateParams()', 9);
+                    reject(response.generate(true, 'parameters missing.', 403, null));
+                } else {
+                    logger.info('Parameters Validated', 'chatGroupController: markGroupChatDelivered(): validateParams()', 9);
+                    resolve();
+                }
+            });
+        }
 
-    //     let modifyChat = () => {
-    //         return new Promise((resolve, reject) => {
-    //             let findQuery = {
-    //                 chatId: { $in: req.body.chatIds },
-    //                 receiverId: req.body.receiverId,
-    //                 delivered: false
-    //             }
+        let modifyChat = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    chatId: { $in: req.body.chatIds }
+                }
 
-    //             let updateQuery = {
-    //                 delivered: true
-    //             }
+                let updateQuery = {
+                    $addToSet: {
+                        receiver: {
+                            receiverId: req.user.userId,
+                            receiverName: req.user.userName,
+                            delivered: true
+                        }
+                    }
+                }
 
-    //             ChatModel.update(findQuery, updateQuery, {
-    //                     multi: true //to update many
-    //                 })
-    //                 .exec()
-    //                 .then((result) => {
-    //                     if (result.n === 0) {
-    //                         logger.info('No Chat Found', 'chatGroupController: markGroupChatDelivered(): modifyChat()');
-    //                         reject(response.generate(true, 'No Chat Found', 404, null));
-    //                     } else {
-    //                         logger.info('Chat Updated', 'chatGroupController: markGroupChatDelivered(): modifyChat()');
-    //                         resolve(result)
-    //                     }
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatGroupController: markGroupChatDelivered(): modifyChat()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
-    //         });
-    //     }
+                ChatModel.update(findQuery, updateQuery, {
+                        multi: true, //to update many
+                        upsert: true
+                    })
+                    .exec()
+                    .then((result) => {
+                        if (result.n === 0) {
+                            logger.info('No Chat Found', 'chatGroupController: markGroupChatDelivered(): modifyChat()');
+                            reject(response.generate(true, 'No Chat Found', 404, null));
+                        } else {
+                            logger.info('Chat Updated', 'chatGroupController: markGroupChatDelivered(): modifyChat()');
+                            resolve(result)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: markGroupChatDelivered(): modifyChat()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //     //<--Local Functions End
+        //<--Local Functions End
 
-    //     validateParams()
-    //         .then(modifyChat)
-    //         .then((result) => {
-    //             res.send(response.generate(false, 'Chat marked as delivered', 200, result));
-    //         })
-    //         .catch((error) => {
-    //             res.send(error);
-    //         })
-    // },
+        validateParams()
+            .then(modifyChat)
+            .then((result) => {
+                res.send(response.generate(false, 'Chat marked as delivered', 200, result));
+            })
+            .catch((error) => {
+                res.send(error);
+            })
+    },
 
-    // markAllGroupChatDelivered: (req, res) => {
+    markAllGroupChatDelivered: (req, res) => {
 
-    //     //Local Function Start-->
+        //Local Function Start-->
 
-    //     let validateParams = () => {
-    //         return new Promise((resolve, reject) => {
-    //             if (check.isEmpty(req.body.userId)) {
-    //                 logger.error('Parameters Missing', 'chatGroupController: markAllGroupChatDelivered(): validateParams()', 9);
-    //                 reject(response.generate(true, 'parameters missing.', 403, null));
-    //             } else {
-    //                 logger.info('Parameters Validated', 'chatGroupController: markAllGroupChatDelivered(): validateParams()', 9);
-    //                 resolve();
-    //             }
-    //         });
-    //     }
+        let findGroupUserIn = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    userId: req.user.userId
+                }
 
-    //     let findUndeliveredChat = () => {
-    //         return new Promise((resolve, reject) => {
-    //             let findQuery = {
-    //                 receiverId: req.body.userId,
-    //                 delivered: false
-    //             }
+                UserModel.findOne(findQuery, { _id: 0, groups: 1 })
+                    .populate('groups.group_id', 'groupId -_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.info('No Group Found', 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()');
+                            reject(response.generate(true, 'No Group Found', 200, null));
+                        } else {
+                            logger.info('Groups Found', 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()');
 
-    //             ChatModel.find(findQuery)
-    //                 .select('chatId senderId')
-    //                 .sort('senderId')
-    //                 .exec()
-    //                 .then((chats) => {
-    //                     if (check.isEmpty(chats)) {
-    //                         logger.info('No Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()');
-    //                         reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
-    //                     } else {
-    //                         logger.info('Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()');
-    //                         resolve(chats)
-    //                     }
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
-    //         });
-    //     }
+                            let groupsArray = Array();
+                            for (let i = 0; i < user.groups.length; i++) {
+                                groupsArray.push(user.groups[i].group_id.groupId);
+                            }
 
-    //     let modifyChat = (chats) => {
-    //         return new Promise((resolve, reject) => {
-    //             let findQuery = {
-    //                 receiverId: req.body.userId,
-    //                 delivered: false
-    //             }
+                            resolve(groupsArray)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //             let updateQuery = {
-    //                 delivered: true
-    //             }
+        let findUndeliveredChat = (groups) => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    groupId: { $in: groups },
+                    'senderId': {
+                        $ne: req.user.userId
+                    },
+                    'receiver.receiverId': {
+                        $ne: req.user.userId
+                    }
+                }
+                console.log(findQuery);
 
-    //             ChatModel.update(findQuery, updateQuery, {
-    //                     multi: true //to update many
-    //                 })
-    //                 .exec()
-    //                 .then((result) => {
-    //                     if (result.n === 0) {
-    //                         logger.info('No Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): modifyChat()');
-    //                         reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
-    //                     } else {
-    //                         logger.info('Undelivered Chat Updated', 'chatGroupController: markAllGroupChatDelivered(): modifyChat()');
-    //                         resolve(chats)
-    //                     }
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): modifyChat()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
-    //         });
-    //     }
+                ChatModel.find(findQuery)
+                    .select('-_id chatId')
+                    .exec()
+                    .then((chats) => {
+                        if (check.isEmpty(chats)) {
+                            logger.info('No Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()');
+                            reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
+                        } else {
+                            logger.info('Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()');
 
-    //     //<--Local Functions End
+                            let chatsArray = Array();
+                            for (let i = 0; i < chats.length; i++) {
+                                chatsArray.push(chats[i].chatId);
+                            }
 
-    //     validateParams()
-    //         .then(findUndeliveredChat)
-    //         .then(modifyChat)
-    //         .then((result) => {
-    //             res.send(response.generate(false, 'All Chat marked as delivered', 200, result));
-    //         })
-    //         .catch((error) => {
-    //             res.send(error);
-    //         })
-    // },
+                            resolve(chatsArray)
 
-    // countGroupUnSeenChat: (req, res) => {
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //     //Local Function Start-->
+        let modifyChat = (chats) => {
+            return new Promise((resolve, reject) => {
 
-    //     let validateParams = () => {
-    //         return new Promise((resolve, reject) => {
-    //             if (check.isEmpty(req.query.userId)) {
-    //                 logger.error('Parameters Missing', 'chatGroupController: countGroupUnSeenChat(): validateParams()', 9);
-    //                 reject(response.generate(true, 'parameters missing.', 403, null));
-    //             } else {
-    //                 logger.info('Parameters Validted', 'chatGroupController: countGroupUnSeenChat(): validateParams()', 9);
-    //                 resolve();
-    //             }
-    //         });
-    //     }
+                let findQuery = { chatId: { $in: chats } };
 
+                let updateQuery = {
+                    $addToSet: {
+                        receiver: {
+                            receiverId: req.user.userId,
+                            receiverName: req.user.userName,
+                            delivered: true
+                        }
+                    }
+                }
 
-    //     let countChat = () => {
-    //         return new Promise((resolve, reject) => {
+                ChatModel.update(findQuery, updateQuery, {
+                        multi: true //to update many
+                    })
+                    .exec()
+                    .then((result) => {
+                        if (result.n === 0) {
+                            logger.info('No Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): modifyChat()');
+                            reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
+                        } else {
+                            logger.info('Undelivered Chat Updated', 'chatGroupController: markAllGroupChatDelivered(): modifyChat()');
+                            resolve(chats)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): modifyChat()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //             let query = [{
-    //                     "$match": {
-    //                         "receiverId": req.query.userId,
-    //                         "seen": false
-    //                     }
-    //                 },
-    //                 {
-    //                     "$group": {
-    //                         "_id": {
-    //                             "senderId": "$senderId"
-    //                         },
-    //                         "count": {
-    //                             $sum: 1
-    //                         }
-    //                     }
-    //                 },
-    //                 {
-    //                     "$project": {
-    //                         "senderId": "$_id.senderId",
-    //                         "count": "$count",
-    //                         "_id": 0
-    //                     }
-    //                 }
-    //             ];
+        //<--Local Functions End
 
-    //             ChatModel.aggregate(query)
-    //                 .then((result) => {
-    //                     logger.info("Unseen Chat Count Found", 'chatGroupController: countGroupUnSeenChat(): countChat()', 10);
-    //                     resolve(result);
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatGroupController: countGroupUnSeenChat(): countChat()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
-    //         });
-    //     }
+        findGroupUserIn()
+            .then(findUndeliveredChat)
+            .then(modifyChat)
+            .then((result) => {
+                res.send(response.generate(false, 'All Chat marked as delivered', 200, result));
+            })
+            .catch((error) => {
+                res.send(error);
+            })
+    },
 
-    //     //<--Local Functions End
+    countGroupUnSeenChat: (req, res) => {
 
-    //     validateParams()
-    //         .then(countChat)
-    //         .then((result) => {
-    //             res.send(response.generate(false, 'unseen chat count found.', 200, result))
-    //         })
-    //         .catch((error) => {
-    //             res.send(error)
-    //         });
-    // },
+        let query = [{
+            "$match": {
+                'senderId': {
+                    $ne: req.user.userId
+                },
+                "receiver": {
+                    $elemMatch: {
+                        "receiverId": req.user.userId,
+                        "seen": false
+                    }
+                }
+            }
+        }, {
+            "$group": {
+                "_id": {
+                    "groupId": "$groupId"
+                },
+                "count": {
+                    $sum: 1
+                }
+            }
+        }, {
+            "$project": {
+                "groupId": "$_id.groupId",
+                "count": "$count",
+                "_id": 0
+            }
+        }];
 
-    // getGroupUnSeenChat: (req, res) => {
+        ChatModel.aggregate(query)
+            .then((result) => {
+                logger.info("Unseen Chat Count Found", 'chatGroupController: countGroupUnSeenChat()', 10);
+                res.send(response.generate(false, 'unseen chat count found.', 200, result))
 
-    //     //Local Function Start-->
+            })
+            .catch((err) => {
+                logger.error(err.message, 'chatGroupController: countGroupUnSeenChat()', 10);
+                res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
+            });
 
-    //     let validateParams = () => {
-    //         return new Promise((resolve, reject) => {
-    //             if (check.isEmpty(req.query.senderId) || check.isEmpty(req.query.receiverId)) {
-    //                 logger.error('Parameters Missing', 'chatGroupController: getGroupUnSeenChat(): validateParams()', 9);
-    //                 reject(response.generate(true, 'parameters missing.', 403, null));
-    //             } else {
-    //                 logger.info('Parameters Validated', 'chatGroupController: getGroupUnSeenChat(): validateParams()', 9);
-    //                 resolve();
-    //             }
-    //         });
-    //     }
+    },
 
-    //     let findChats = () => {
-    //         return new Promise((resolve, reject) => {
+    getGroupUnSeenChat: (req, res) => {
 
-    //             let findQuery = {
-    //                 senderId: req.query.senderId,
-    //                 receiverId: req.query.receiverId,
-    //                 seen: false
-    //             };
+        //Local Function Start-->
 
-    //             ChatModel.find(findQuery)
-    //                 .select('-_id -__v')
-    //                 .sort('-createdOn')
-    //                 .exec()
-    //                 .then((chats) => {
-    //                     if (check.isEmpty(chats)) {
-    //                         logger.info('No Chat Found', 'chatGroupController: getGroupUnSeenChat(): findChats()');
-    //                         reject(response.generate(true, 'No Chat Found', 200, null));
-    //                     } else {
-    //                         logger.info('Chats Found', 'chatGroupController: getGroupUnSeenChat(): findChats()');
-    //                         resolve(chats)
-    //                     }
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatControllerr: getGroupUnSeenChat(): findChats()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
-    //         });
-    //     }
+        let validateParams = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.query.groupId)) {
+                    logger.error('Parameters Missing', 'chatGroupController: getGroupUnSeenChat(): validateParams()', 9);
+                    reject(response.generate(true, 'parameters missing.', 403, null));
+                } else {
+                    logger.info('Parameters Validated', 'chatGroupController: getGroupUnSeenChat(): validateParams()', 9);
+                    resolve();
+                }
+            });
+        }
 
-    //     //<--Local Functions End
+        let findChats = () => {
+            return new Promise((resolve, reject) => {
 
-    //     validateParams()
-    //         .then(findChats)
-    //         .then((chats) => {
-    //             res.send(response.generate(false, 'chat found and listed.', 200, chats))
-    //         })
-    //         .catch((error) => {
-    //             res.send(error)
-    //         });
-    // },
+                let findQuery = {
+                    groupId: req.query.groupId,
+                    "$or": [{
+                            "receiver.receiverId": req.user.userId,
+                            "seen": false
+                        },
+                        {
+                            "receiver.receiverId": {
+                                $ne: req.user.userId
+                            }
+                        }
+                    ]
+                };
 
-    // getGroupLastChats: (req, res) => {
+                ChatModel.find(findQuery)
+                    .select('-_id -__v')
+                    .sort('-createdOn')
+                    .exec()
+                    .then((chats) => {
+                        if (check.isEmpty(chats)) {
+                            logger.info('No Chat Found', 'chatGroupController: getGroupUnSeenChat(): findChats()');
+                            reject(response.generate(true, 'No Chat Found', 200, null));
+                        } else {
+                            logger.info('Chats Found', 'chatGroupController: getGroupUnSeenChat(): findChats()');
+                            resolve(chats)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupControllerr: getGroupUnSeenChat(): findChats()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //     //Local Function Start-->
+        //<--Local Functions End
 
-    //     let validateParams = () => {
-    //         return new Promise((resolve, reject) => {
-    //             if (check.isEmpty(req.query.userId)) {
-    //                 logger.error('Parameters Missing', 'chatControllerr: getGroupLastChats(): validateParams()', 9);
-    //                 reject(response.generate(true, 'parameters missing.', 403, null));
-    //             } else {
-    //                 logger.info('Parameters Validated', 'chatControllerr: getGroupLastChats(): validateParams()', 9);
-    //                 resolve();
-    //             }
-    //         });
-    //     }
+        validateParams()
+            .then(findChats)
+            .then((chats) => {
+                res.send(response.generate(false, 'chat found and listed.', 200, chats))
+            })
+            .catch((error) => {
+                res.send(error)
+            });
+    },
 
-    //     let findDistinctSenderLastChat = () => {
+    getGroupLastChats: (req, res) => {
 
-    //         return new Promise((resolve, reject) => {
-    //             let query = [{
-    //                     "$match": {
-    //                         "$or": [{
-    //                                 "senderId": req.query.userId
-    //                             },
-    //                             {
-    //                                 "receiverId": req.query.userId
-    //                             }
-    //                         ]
-    //                     }
-    //                 },
-    //                 { "$sort": { "createdOn": -1 } },
-    //                 {
-    //                     "$group": {
-    //                         "_id": {
-    //                             "senderId": {
-    //                                 $cond: { if: { $eq: ["$senderId", req.query.userId] }, then: "$receiverId", else: "$senderId" }
-    //                             }
-    //                         },
-    //                         "MAX(createdOn)": {
-    //                             "$max": "$createdOn"
-    //                         },
-    //                         "FIRST(message)": {
-    //                             "$first": "$message"
-    //                         }
-    //                     }
-    //                 },
-    //                 {
-    //                     "$project": {
-    //                         "senderId": "$_id.senderId",
-    //                         "createdOn": "$MAX(createdOn)",
-    //                         "message": "$FIRST(message)",
-    //                         "_id": 0
-    //                     }
-    //                 },
-    //                 { "$sort": { "createdOn": -1 } }
-    //             ];
+        let findGroupUserIn = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    userId: req.user.userId
+                }
 
-    //             ChatModel.aggregate(query)
-    //                 .then((chats) => {
-    //                     if (check.isEmpty(chats)) {
-    //                         logger.info('No Chat Found', 'chatControllerr: findDistinctSenderLastChat()', 10);
-    //                         reject(response.generate(true, 'No Unseen Chat Group Found', 200, null));
-    //                     } else {
-    //                         logger.info('Chat Found', 'chatControllerr: findDistinctSenderLastChat()', 10);
-    //                         resolve(chats);
-    //                     }
-    //                 })
-    //                 .catch((err) => {
-    //                     logger.error(err.message, 'chatControllerr: findDistinctSenderLastChat()', 10);
-    //                     reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
-    //                 });
+                UserModel.findOne(findQuery, { _id: 0, groups: 1 })
+                    .populate('groups.group_id', 'groupId -_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.info('No Group Found', 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()');
+                            reject(response.generate(true, 'No Group Found', 200, null));
+                        } else {
+                            logger.info('Groups Found', 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()');
 
-    //         });
-    //     }
+                            let groupsArray = Array();
+                            for (let i = 0; i < user.groups.length; i++) {
+                                groupsArray.push(user.groups[i].group_id.groupId);
+                            }
+                            resolve(groupsArray)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
 
-    //     //<--Local Functions End
+        let findLastChat = (groups) => {
+            return new Promise((resolve, reject) => {
 
-    //     validateParams()
-    //         .then(findDistinctSenderLastChat)
-    //         .then((chats) => {
-    //             res.send(response.generate(false, 'chat found and listed.', 200, chats));
-    //         })
-    //         .catch((error) => {
-    //             res.send(error)
-    //         });
-    // }
+                let query = [{
+                        "$match": {
+                            groupId: { $in: groups }
+                        }
+                    },
+                    { "$sort": { "createdOn": -1 } },
+                    {
+                        "$group": {
+                            "_id": {
+                                "groupId": "$groupId"
+                            },
+                            "MAX(createdOn)": {
+                                "$max": "$createdOn"
+                            },
+                            "FIRST(message)": {
+                                "$first": "$message"
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "groupId": "$_id.groupId",
+                            "createdOn": "$MAX(createdOn)",
+                            "message": "$FIRST(message)",
+                            "_id": 0
+                        }
+                    },
+                    { "$sort": { "createdOn": -1 } }
+                ];
+
+                ChatModel.aggregate(query)
+                    .then((chats) => {
+                        if (check.isEmpty(chats)) {
+                            logger.info('No Chat Found', 'chatGroupControllerr: findLastChat(): getGroupLastChats()', 10);
+                            reject(response.generate(true, 'No Unseen Chat Group Found', 200, null));
+                        } else {
+                            logger.info('Chat Found', 'chatGroupControllerr: findLastChat(): getGroupLastChats()', 10);
+                            resolve(chats)
+
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupControllerr: findLastChat(): getGroupLastChats()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            })
+        }
+
+        //<--Local Functions End
+
+        findGroupUserIn()
+            .then(findLastChat)
+            .then((chats) => {
+                res.send(response.generate(false, 'chat found and listed.', 200, chats))
+            })
+            .catch((error) => {
+                res.send(error)
+            });
+    }
 
 }
 

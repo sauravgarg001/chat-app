@@ -31,15 +31,11 @@ $(document).ready(function() {
         });
         //-------------------------------------------------
         $("#logout").click(function() {
-            let object = {
-                userId: userId,
-                authToken: authToken
-            }
-            let json = JSON.stringify(object);
+
             $.ajax({
                 type: 'POST', // Type of request to be send, called as method
                 url: `${baseUrl}/user/logout`, // Url to which the request is send
-                data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+                data: JSON.stringify({ authToken: authToken }), // Data sent to server, a set of key/value pairs (i.e. form fields and values)
                 cache: false, // To unable request pages to be cached
                 contentType: 'application/json', // The content type used when sending data to the server.
                 processData: false, // To send DOMDocument or non processed data file it is set to false
@@ -175,17 +171,11 @@ $(document).ready(function() {
 
         let markUndeliveredSingleChats = () => {
             return new Promise((resolve, reject) => {
-                let object = {
-                    authToken: authToken,
-                    userId: userId,
-                };
-
-                let json = JSON.stringify(object);
 
                 $.ajax({
                     type: 'PUT', // Type of request to be send, called as method
                     url: `${baseUrl}/chat/single/delivered/mark/all`, // Url to which the request is send
-                    data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+                    data: JSON.stringify({ authToken: authToken }), // Data sent to server, a set of key/value pairs (i.e. form fields and values)
                     cache: false, // To unable request pages to be cached
                     contentType: 'application/json', // The content type used when sending data to the server.
                     processData: false, // To send DOMDocument or non processed data file it is set to false
@@ -231,16 +221,11 @@ $(document).ready(function() {
 
         let markUndeliveredGroupChats = () => {
             return new Promise((resolve, reject) => {
-                let object = {
-                    authToken: authToken
-                };
-
-                let json = JSON.stringify(object);
 
                 $.ajax({
                     type: 'PUT', // Type of request to be send, called as method
                     url: `${baseUrl}/chat/group/delivered/mark/all`, // Url to which the request is send
-                    data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+                    data: JSON.stringify({ authToken: authToken }), // Data sent to server, a set of key/value pairs (i.e. form fields and values)
                     cache: false, // To unable request pages to be cached
                     contentType: 'application/json', // The content type used when sending data to the server.
                     processData: false, // To send DOMDocument or non processed data file it is set to false
@@ -286,11 +271,8 @@ $(document).ready(function() {
 
         let getSingleLastChat = () => {
             return new Promise((resolve, reject) => {
-                let query = {
-                    userId: userId,
-                    authToken: authToken
-                }
-                $.get(`${baseUrl}/chat/single/lastchat`, query, function(response, status, xhr) {
+
+                $.get(`${baseUrl}/chat/single/lastchat`, { authToken: authToken }, function(response, status, xhr) {
                     if (response.status == 200) {
                         let chats = response.data;
                         if (chats) {
@@ -322,10 +304,8 @@ $(document).ready(function() {
 
         let getGroupLastChat = () => {
             return new Promise((resolve, reject) => {
-                let query = {
-                    authToken: authToken
-                }
-                $.get(`${baseUrl}/chat/group/lastchat`, query, function(response, status, xhr) {
+
+                $.get(`${baseUrl}/chat/group/lastchat`, { authToken: authToken }, function(response, status, xhr) {
                     if (response.status == 200) {
                         let chats = response.data;
                         if (chats) {
@@ -346,8 +326,16 @@ $(document).ready(function() {
                                 let clone = $(group).clone();
                                 $(group).remove();
                                 while (index < senderList.length) {
-                                    let time = $(senderList[index]).find(".sender-message-time");
-                                    let date = $(senderList[index]).find(".sender-message-date");
+                                    let time = $(senderList[index]).find(".sender-message-time").text();
+                                    if (!time.trim()) {
+                                        $(senderList[index]).before(clone);
+                                        break;
+                                    }
+                                    let date = $(senderList[index]).find(".sender-message-date").text();
+                                    if (!date.trim()) {
+                                        date = formatDate(Date.now());
+                                    }
+
                                     let senderChatCreatedOn = new Date(unformatDate(date) + " " + change12HourTo24Hour(time))
                                     let groupChatCreatedOn = new Date(chats[0].createdOn);
                                     if (groupChatCreatedOn > senderChatCreatedOn) {
@@ -373,11 +361,8 @@ $(document).ready(function() {
 
         let countUnseenSingleChats = () => {
             return new Promise((resolve, reject) => {
-                let query = {
-                    userId: userId,
-                    authToken: authToken
-                }
-                $.get(`${baseUrl}/chat/single/unseen/count`, query, function(response, status, xhr) {
+
+                $.get(`${baseUrl}/chat/single/unseen/count`, { authToken: authToken }, function(response, status, xhr) {
                     if (response.status == 200) {
                         let data = response.data;
 
@@ -398,10 +383,10 @@ $(document).ready(function() {
 
         let countUnseenGroupChats = () => {
             return new Promise((resolve, reject) => {
-                let query = {
-                    authToken: authToken
-                }
-                $.get(`${baseUrl}/chat/group/unseen/count`, query, function(response, status, xhr) {
+
+                $.get(`${baseUrl}/chat/group/unseen/count`, { authToken: authToken }, function(response, status, xhr) {
+                    console.log(response);
+
                     if (response.status == 200) {
                         let data = response.data;
 
@@ -425,16 +410,16 @@ $(document).ready(function() {
         getAllUsers()
             .then(getUserInfo)
             .then(markUndeliveredSingleChats)
-            // .then(markUndeliveredGroupChats)
+            .then(markUndeliveredGroupChats)
             .then(getSingleLastChat)
-            // .then(getGroupLastChat)
+            .then(getGroupLastChat)
             .then(countUnseenSingleChats)
-            // .then(countUnseenGroupChats)
+            .then(countUnseenGroupChats)
             .then(() => {
                 console.log("Initialization Done.");
             })
             .catch((err) => {
-                console.log(err);
+                console.error(err);
             });
     }
 
@@ -689,14 +674,13 @@ $(document).ready(function() {
     //-------------------------------------------------
     $('body').on('click', '.sender,.group', function(e) { //click event on each sender for dynamic elements
 
-        let apiType = 'single'
+        let apiType;
         if ($(this).hasClass("group")) {
             apiType = 'group';
-            //add group template from chatbox
-            $("#chatBox").addClass("group-message");
+            $("#chatBox").addClass("group-message"); //add group template from chatbox
         } else {
-            //Remove group template from chatbox
-            $("#chatBox").removeClass("group-message");
+            apiType = 'single'
+            $("#chatBox").removeClass("group-message"); //Remove group template from chatbox
         }
 
         let blocked = false;
@@ -744,11 +728,15 @@ $(document).ready(function() {
                 if (blocked || apiType == 'group')
                     resolve(date);
                 else {
+
                     let query = {
-                        authToken: authToken,
-                        senderId: id,
-                        receiverId: userId,
+                        authToken: authToken
                     };
+                    if (apiType == 'group') {
+                        query['groupId'] = id;
+                    } else {
+                        query['senderId'] = id;
+                    }
                     $.get(`${baseUrl}/chat/${apiType}/unseen`, query, function(response, status, xhr) {
 
                         if (response.status == 200) {
@@ -1021,7 +1009,7 @@ $(document).ready(function() {
                     }
 
                 } else {
-                    console.log(`${baseUrl}/chat/${apiType}/seen not working`);
+                    console.error(`${baseUrl}/chat/${apiType}/seen not working`);
                 }
 
             }, "json");
@@ -1159,7 +1147,6 @@ function markChatAsSeen(unseenMessages) {
     //Send API
     let object = {
         chatIds: unseenMessages,
-        receiverId: userId,
         authToken: authToken
     }
     let json = JSON.stringify(object);
@@ -1199,7 +1186,6 @@ function markChatAsDelivered(undeliveredMessages) {
     //Send API
     let object = {
         chatIds: undeliveredMessages,
-        receiverId: userId,
         authToken: authToken
     }
 
