@@ -590,6 +590,7 @@ let userController = {
 
         UserModel.findOne({ 'userId': req.user.userId })
             .populate('blocked.user_id', 'userId -_id')
+            .populate('groups.group_id', 'groupId name -_id')
             .select('firstName lastName groups blocked.user_id.userId')
             .exec()
             .then((user) => {

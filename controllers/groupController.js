@@ -3,17 +3,13 @@ const shortid = require('shortid');
 
 //Libraries
 const time = require('../libs/timeLib');
-const password = require('../libs/passwordLib');
 const response = require('../libs/responseLib');
 const logger = require('../libs/loggerLib');
-const validate = require('../libs/validationLib');
 const check = require('../libs/checkLib');
-const token = require('../libs/tokenLib');
 
 //Models
 const GroupModel = mongoose.model('Group');
 const UserModel = mongoose.model('User');
-const AuthModel = mongoose.model('Auth');
 const SpamModel = mongoose.model('Spam');
 
 
@@ -80,6 +76,7 @@ let groupController = {
                 let userId = req.user.userId;
                 findUserAndGetObjectId(userId)
                     .then((user_id) => {
+                        req.user._id = user_id;
                         let members = req.body.members;
                         user_id = mongoose.Types.ObjectId(user_id);
                         members.push({ user_id: user_id, admin: true });
@@ -106,12 +103,11 @@ let groupController = {
                                 logger.info('Group Created', 'groupController: createUser', 10);
                                 group = group.toObject();
 
-                                delete group._id;
                                 delete group.__v;
                                 delete group.chats;
                                 delete group.modifiedOn;
 
-                                resolve(group)
+                                resolve({ group: group, members: members })
                             })
                             .catch((err) => {
                                 logger.error(err.message, 'groupController: createUser', 10);
@@ -126,11 +122,46 @@ let groupController = {
             });
         }
 
+        let updateUserDetails = (data) => {
+            return new Promise((resolve, reject) => {
+                let group = data.group;
+                let members = data.members;
+
+                for (let i = 0; i < members.length; i++) {
+
+                    UserModel.update({ _id: members[i].user_id }, {
+                            $addToSet: {
+                                groups: { group_id: group._id }
+                            },
+                            modifiedOn: time.now()
+                        })
+                        .then((result) => {
+                            if (result.nModified != 0) {
+                                logger.info('User Details Updated', 'groupController: updateUserDetails()', 10);
+
+                                if (i == members.length - 1) {
+                                    delete group._id;
+                                    resolve(group);
+                                }
+                            } else {
+                                logger.error('User Details Updated', 'groupController: updateUserDetails()', 10);
+                                resolve(response.generate(true, 'Group created and user details updated', 403, null));
+                            }
+                        })
+                        .catch((err) => {
+                            logger.error(err.message, 'groupController: updateUserDetails()', 10);
+                            reject(response.generate(true, 'Failed to update user details', 403, null));
+                        });
+                }
+            });
+        }
+
         //<--Local Functions End
 
         checkUserInput(req, res)
             .then(validateMembers)
             .then(createGroup)
+            .then(updateUserDetails)
             .then((group) => {
                 res.send(response.generate(false, 'Group created', 200, group));
             })
@@ -165,21 +196,18 @@ let groupController = {
                                 }
                             }
                         },
-                        { $sort: { "chats.createdOn": -1 } },
                         {
                             $project: {
                                 "groupId": "$groupId",
                                 "name": "$name",
-                                "createdOn": { $arrayElemAt: ["$createdOn", 0] },
-                                "message": { $arrayElemAt: ["$message", 0] },
                                 "_id": 0
                             }
-                        }, { $sort: { "createdOn": -1 } }
+                        }
                     ])
                     .then((groups) => {
                         if (check.isEmpty(groups)) {
                             logger.info('No Group Found', 'groupController: getUnspammedGroups');
-                            reject(response.generate(true, 'No User Found', 404, null));
+                            reject(response.generate(true, 'No Group Found', 404, null));
                         } else {
                             logger.info('Groups Found', 'groupController: getUnspammedGroups');
                             resolve(response.generate(false, 'All Group Details Found', 200, groups));
@@ -204,6 +232,117 @@ let groupController = {
                 res.status(err.status);
                 res.send(err);
             });
+    },
+
+    spamGroup: (req, res) => {
+
+        //Local Function Start-->
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.groupId)) {
+                    logger.error('Missing Field', 'groupController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'groupController: validateField()', 10);
+                    resolve();
+                }
+            });
+        }
+
+        let getSpamGroupObjectId = () => {
+            return new Promise((resolve, reject) => {
+
+                GroupModel.findOne({ groupId: req.body.groupId })
+                    .select('_id')
+                    .exec()
+                    .then((spamGroup) => {
+                        if (check.isEmpty(spamGroup)) {
+                            logger.error('No Spam Group Found', 'groupController: findGroupAndGetObjectId()', 7);
+                            reject(response.generate(true, 'No Group Details Found', 404, null));
+                        } else {
+                            logger.info('Spam Group Found', 'groupController: findGroupAndGetObjectId()', 10);
+                            req.body["_id"] = spamGroup._id;
+                            resolve(req.user.userId);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: findGroupAndGetObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find spam group', 500, null));
+                    });
+            });
+        }
+
+        let leaveGroup = (user_id) => {
+            return new Promise((resolve, reject) => {
+                UserModel.update({
+                        userId: req.user.userId,
+                    }, {
+                        $pull: {
+                            groups: { group_id: req.body._id }
+                        }
+                    }, { upsert: true })
+                    .then((result) => {
+                        if (result.n == 1) {
+                            logger.info('User Left Group', 'groupController: leaveGroup()', 10);
+                            resolve(user_id);
+                        } else {
+                            logger.error('User Unable to Leave Group', 'groupController: leaveGroup()', 10);
+                            resolve(response.generate(true, 'User unable to leave group', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: leaveGroup()', 10);
+                        reject(response.generate(true, 'Failed to leave group', 500, null));
+                    });
+            });
+        }
+
+        let updateGroupInSpam = (user_id) => {
+            return new Promise((resolve, reject) => {
+
+                SpamModel.update({
+                        group_id: req.body._id
+                    }, {
+                        $addToSet: {
+                            by: { user_id: user_id }
+                        },
+                        modifiedOn: time.now()
+                    }, { upsert: true }) //Insert if document not present
+                    .then((result) => {
+
+                        if (!check.isEmpty(result.upserted) || result.nModified != 0) {
+                            logger.info('Group Spammed', 'groupController: updateGroupInSpam()', 10);
+                            resolve(response.generate(false, 'Group spammed', 200, null));
+                        } else {
+                            logger.error('Group Unable to Spam', 'groupController: updateGroupInSpam()', 10);
+                            resolve(response.generate(true, 'Group unable to spam', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: updateGroupInSpam()', 10);
+                        reject(response.generate(true, 'Failed to spam group', 500, null));
+                    });
+
+            });
+        }
+
+        //<--Local Functions End
+
+        validateField(req, res)
+            .then(getSpamGroupObjectId)
+            .then(findUserAndGetObjectId)
+            .then(leaveGroup)
+            .then(updateGroupInSpam)
+            .then((response) => {
+                res.status(200);
+                res.send(response);
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
     }
 
 }

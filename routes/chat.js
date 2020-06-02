@@ -2,25 +2,42 @@ var express = require('express');
 var router = express.Router();
 
 //Controllers
-const chatController = require("../controllers/chatController");
+const singleController = require("../controllers/chatSingleController");
+const groupController = require("../controllers/chatGroupController");
 
 //Middlewares
 const auth = require('../middlewares/auth')
 
 
-router.route('/single/seen/sender').get(auth.isAuthorized, chatController.getUserSeenChatFromSender);
+//Single
+router.route('/single/seen').get(auth.isAuthorized, singleController.getUserSeenChat);
 
-router.route('/single/seen/sender/mark').put(auth.isAuthorized, chatController.markUserChatFromSenderSeen);
+router.route('/single/seen/mark').put(auth.isAuthorized, singleController.markUserChatSeen);
 
-router.route('/single/delivered/sender/mark').put(auth.isAuthorized, chatController.markUserChatFromSenderDelivered);
+router.route('/single/delivered/mark').put(auth.isAuthorized, singleController.markUserChatDelivered);
 
-router.route('/single/delivered/sender/mark/all').put(auth.isAuthorized, chatController.markAllUserChatFromSenderDelivered);
+router.route('/single/delivered/mark/all').put(auth.isAuthorized, singleController.markAllUserChatDelivered);
 
-router.route('/single/unseen/sender/count').get(auth.isAuthorized, chatController.countUserUnSeenChatFromSender);
+router.route('/single/unseen/count').get(auth.isAuthorized, singleController.countUserUnSeenChat);
 
-router.route('/single/unseen/sender').get(auth.isAuthorized, chatController.getUserUnSeenChatFromSender);
+router.route('/single/unseen').get(auth.isAuthorized, singleController.getUserUnSeenChat);
 
-router.route('/single/senders/lastchat').get(auth.isAuthorized, chatController.getUserLastChatFromSenders);
+router.route('/single/lastchat').get(auth.isAuthorized, singleController.getUserLastChats);
+
+//Group
+router.route('/group/seen').get(auth.isAuthorized, groupController.getGroupSeenChat);
+
+// router.route('/group/seen/mark').put(auth.isAuthorized, groupController.markGroupChatAsSeen);
+
+// router.route('/group/delivered/mark').put(auth.isAuthorized, groupController.markGroupChatAsDelivered);
+
+// router.route('/group/delivered/mark/all').put(auth.isAuthorized, groupController.markGroupAllChatAsDelivered);
+
+// router.route('/group/unseen/count').get(auth.isAuthorized, groupController.countGroupUnseenChats);
+
+// router.route('/group/unseen').get(auth.isAuthorized, groupController.getGroupUnseenChat);
+
+// router.route('/group/lastchat').get(auth.isAuthorized, groupController.getGroupLastChats);
 
 
 module.exports = router;

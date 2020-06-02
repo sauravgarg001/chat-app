@@ -35,7 +35,8 @@ app.use(express.static(path.join(__dirname, 'client')));
 //Models
 const UserModel = require('./models/User');
 const AuthModel = require('./models/Auth');
-const ChatModel = require('./models/Chat');
+const SingleChatModel = require('./models/SingleChat');
+const GroupChatModel = require('./models/GroupChat');
 const SpamModel = require('./models/Spam');
 const GroupModel = require('./models/Group');
 

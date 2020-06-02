@@ -48,4 +48,4 @@ let chatSchema = new Schema({
     }
 });
 
-module.exports = mongoose.model('Chat', chatSchema);
+module.exports = mongoose.model('SingleChat', chatSchema);

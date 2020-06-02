@@ -8,7 +8,7 @@ let blockedSubSchema = new mongoose.Schema({
 }, { _id: false });
 
 let groupSubSchema = new mongoose.Schema({
-    user_id: {
+    group_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Group'
     }

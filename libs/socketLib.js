@@ -12,7 +12,8 @@ const check = require("./checkLib");
 const time = require("./timeLib");
 
 //Models
-const ChatModel = mongoose.model('Chat');
+const SingleChatModel = mongoose.model('SingleChat');
+const GroupChatModel = mongoose.model('GroupChat');
 const UserModel = mongoose.model('User');
 
 
@@ -163,6 +164,33 @@ let setServer = (server) => {
         });
 
         //-------------------------------------------------
+        socket.on('group-chat-msg', (data) => {
+            let chatMessage = data.chatMessage;
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => { //To check whether the user authToken exists
+
+                if (user.data.userId == chatMessage.senderId) {
+                    chatMessage['chatId'] = shortid.generate();
+                    myIo.emit("getChatId@" + data.authToken, chatMessage['chatId']);
+                    console.log("Message received:" + chatMessage);
+
+                    setTimeout(function() { //save chat after one second delay
+
+                        eventEmitter.emit('save-group-chat', chatMessage);
+
+                    }, 1000);
+
+                    socket.to(chatMessage.groupId).broadcast.emit("receive-group", chatMessage);
+
+                } else {
+                    console.log("Somewhen tried to send message using " + chatMessage.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' })
+            });
+        });
+        //-------------------------------------------------
         socket.on('typing', (data) => {
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
@@ -176,6 +204,21 @@ let setServer = (server) => {
                         .catch((err) => {
                             console.log(err);
                         });
+                } else {
+                    console.log("Somewhen tried to check typing status using " + data.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
+            });
+        });
+        //-------------------------------------------------
+        socket.on('typing-group', (data) => {
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.senderId) {
+                    socket.to(data.groupId).broadcast.emit("typing-group", data.groupId, data.senderName);
                 } else {
                     console.log("Somewhen tried to check typing status using " + data.senderId + " id");
                 }
@@ -232,6 +275,28 @@ let setServer = (server) => {
                 socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
             });
         });
+        //-------------------------------------------------
+        socket.on('configure-groups', (data) => {
+            let groups = data.groups;
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => { //To check whether the user authToken exists
+
+                if (user.data.userId == data.userId) {
+                    for (let i = 0; i < groups.length; i++) {
+                        // joining chat-group room.
+                        socket.join(groups[i].group_id.groupId);
+                    }
+                    console.log("Groups configured");
+                } else {
+                    console.log("Somewhen tried to send message using " + chatMessage.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' })
+            });
+        });
+
+
 
     });
 
@@ -243,7 +308,7 @@ let setServer = (server) => {
 // Saving chats to database.
 eventEmitter.on('save-chat', (data) => {
 
-    let newChat = new ChatModel({
+    let newChat = new SingleChatModel({
 
         chatId: data.chatId,
         senderName: data.senderName,
@@ -262,6 +327,34 @@ eventEmitter.on('save-chat', (data) => {
                 console.error("Chat is not saved");
             } else {
                 console.info("Chat saved");
+            }
+        })
+        .catch((err) => {
+            console.error(`Error occurred: ${err}`);
+        });
+
+});
+
+// Saving chats to database.
+eventEmitter.on('save-group-chat', (data) => {
+
+    let newChat = new GroupChatModel({
+
+        chatId: data.chatId,
+        groupId: data.groupId,
+        groupName: data.groupName,
+        senderName: data.senderName,
+        senderId: data.senderId,
+        message: data.message
+
+    });
+
+    newChat.save()
+        .then((result) => {
+            if (check.isEmpty(result)) {
+                console.error("Group Chat is not saved");
+            } else {
+                console.info("Group Chat saved");
             }
         })
         .catch((err) => {

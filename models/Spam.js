@@ -23,11 +23,13 @@ let spamSchema = new mongoose.Schema({
     },
     createdOn: {
         type: Date,
-        default: Date.now
+        default: Date.now,
+        required: true
     },
     modifiedOn: {
         type: Date,
-        default: Date.now
+        default: Date.now,
+        required: true
     }
 });
 

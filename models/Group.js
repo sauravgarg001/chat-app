@@ -14,47 +14,6 @@ let membersSubSchema = new mongoose.Schema({
     }
 }, { _id: false });
 
-let receiverSubSchema = new mongoose.Schema({
-    receiver_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    delivered: {
-        type: Boolean,
-        default: false
-    },
-    seen: {
-        type: Boolean,
-        default: false
-    }
-}, { _id: false });
-
-let chatsSubSchema = new mongoose.Schema({
-    chatId: {
-        type: String,
-        required: true
-    },
-    sender_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    message: {
-        type: String,
-        required: true
-    },
-    receiver: [receiverSubSchema],
-    createdOn: {
-        type: Date,
-        default: Date.now
-    },
-    modifiedOn: {
-        type: Date,
-        default: Date.now
-    }
-});
-
 let groupSchema = new Schema({
 
     groupId: {
@@ -68,7 +27,6 @@ let groupSchema = new Schema({
         required: true
     },
     members: [membersSubSchema],
-    chats: [chatsSubSchema],
     createdOn: {
         type: Date,
         default: Date.now

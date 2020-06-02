@@ -28,6 +28,7 @@
 
 .time,
 .sender,
+.group,
 .date {
     -webkit-touch-callout: none;
     /* iOS Safari */
@@ -50,13 +51,15 @@
     text-overflow: ellipsis;
 }
 
-.sender {
+.sender,
+.group {
     border: 1px solid rgba(0, 0, 0, 0.125);
     border: 0px 0px 1px 0px;
     width: 100%;
 }
 
-.sender:hover {
+.sender:hover,
+.group:hover {
     background-color: #F5F5F5 !important;
     cursor: pointer;
 }
@@ -66,11 +69,13 @@
     cursor: pointer;
 }
 
-.sender.active {
+.sender.active,
+.group.active {
     background-color: #EBEBEB !important;
 }
 
-.sender .sender-img .img.h2 {
+.sender .sender-img .img.h2,
+.group .group-img .img.h2 {
     background-color: var( --secondary);
 }
 
@@ -78,11 +83,13 @@
     background-color: white !important;
 }
 
-.sender.active .sender-img .img.h2 {
+.sender.active .sender-img .img.h2,
+.group.active .group-img .img.h2 {
     background-color: var( --dark);
 }
 
 .sender .sender-img,
+.group .group-img,
 .user .user-img {
     padding-left: 1.5rem !important;
     padding-bottom: 0.5rem !important;
@@ -91,6 +98,7 @@
 }
 
 .sender .sender-img .img,
+.group .group-img .img,
 .user .user-img .img {
     padding-top: 10px;
     text-align: center;
@@ -101,26 +109,31 @@
     vertical-align: middle;
 }
 
-.sender .sender-text {
+.sender .sender-text,
+.group .group-text {
     padding-right: 0rem !important;
     padding-left: 0rem !important;
 }
 
-.sender .sender-text .card-body {
+.sender .sender-text .card-body,
+.group .group-text .card-body {
     padding-top: 0rem !important;
     padding-bottom: 0rem !important;
 }
 
-.sender-dropdown-menu-link {
+.sender-dropdown-menu-link,
+.group-dropdown-menu-link {
     display: none;
     color: var(--secondary);
 }
 
-.sender:hover .sender-dropdown-menu-link {
+.sender:hover .sender-dropdown-menu-link,
+.group:hover .group-dropdown-menu-link {
     display: unset;
 }
 
-.sender-dropdown-menu-link:hover {
+.sender-dropdown-menu-link:hover,
+.group-dropdown-menu-link:hover {
     color: var(--dark);
 }
 
@@ -139,20 +152,6 @@
 .message-recieved {
     float: left !important;
     background-color: var( --dark);
-}
-
-#chatBox:not(.group) .message-name {
-    display: none;
-}
-
-#chatBox.group .message-name {
-    display: unset;
-}
-
-#chatBox.group .message-recieved-block,
-#chatBox.group .message-sent-block {
-    margin-top: 0.6rem !important;
-    margin-bottom: 0.6rem !important;
 }
 
 .message-sent {
@@ -228,6 +227,23 @@
     border-radius: 10px;
 }
 
-.border-primary {
+.border-info {
     border-color: #20BEBE !important;
+}
+
+
+/* Group Chat Box*/
+
+#chatBox:not(.group-message) .message-name {
+    display: none;
+}
+
+#chatBox.group-message .message-name {
+    display: unset;
+}
+
+#chatBox.group-message .message-recieved-block,
+#chatBox.group-message .message-sent-block {
+    margin-top: 0.6rem !important;
+    margin-bottom: 0.6rem !important;
 }

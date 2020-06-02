@@ -18,20 +18,7 @@ router.route('/all').get(auth.isAuthorized, groupController.getAllGroups);
 
 // router.route('/admin/make').put(auth.isAuthorized, groupController.markUserAdmin);
 
-// router.route('/chat/seen/mark').put(auth.isAuthorized, groupController.markChatAsSeen);
-
-// router.route('/chat/delivered/mark').put(auth.isAuthorized, groupController.markChatAsDelivered);
-
-// router.route('/chat/seen/mark/all').put(auth.isAuthorized, groupController.markAllChatAsSeen);
-
-// router.route('/chat/delivered/mark/all').put(auth.isAuthorized, groupController.markAllChatAsDelivered);
-
-// router.route('/chat/unseen/count').get(auth.isAuthorized, chatController.counUnseenChatOfGroups);
-
-// router.route('/chat/unseen').get(auth.isAuthorized, chatController.getUnseenChat);
-
-// router.route('/chat/lastchat').get(auth.isAuthorized, chatController.getLastChatOfGroups);
-
+router.route('/spam').put(auth.isAuthorized, groupController.spamGroup);
 
 
 module.exports = router;
