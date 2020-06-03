@@ -34,8 +34,19 @@ let chatGroupController = {
 
                 ChatModel.aggregate([{
                             $match: {
-                                groupId: req.query.groupId
-                            }
+                                groupId: req.query.groupId,
+                                $or: [{
+                                    receiver: {
+                                        $elemMatch: {
+                                            "receiverId": req.user.userId,
+                                            "delivered": true,
+                                            "seen": true
+                                        }
+                                    }
+                                }, {
+                                    senderId: req.user.userId
+                                }]
+                            },
                         },
                         {
                             $sort: {
@@ -122,20 +133,23 @@ let chatGroupController = {
                 }
 
                 let updateQuery = {
-                    $addToSet: {
-                        receiver: {
-                            receiverId: req.user.userId,
-                            receiverName: req.user.userName,
-                            delivered: true,
-                            seen: true
-                        }
+                    $set: {
+                        'receiver.$[i].seen': true
                     }
                 }
 
-                ChatModel.update(findQuery, updateQuery, {
-                        multi: true, //to update many
-                        upsert: true
-                    })
+                let options = {
+                    multi: true, //to update many
+                    arrayFilters: [{
+                        "i.receiverId": req.user.userId,
+                        "i.receiverName": req.user.userName,
+                        "i.delivered": true,
+                        "i.seen": false,
+                    }]
+
+                }
+
+                ChatModel.update(findQuery, updateQuery, options)
                     .exec()
                     .then((result) => {
                         if (result.n === 0) {
@@ -280,6 +294,7 @@ let chatGroupController = {
 
                 ChatModel.find(findQuery)
                     .select('-_id chatId')
+                    .sort('groupId senderId')
                     .exec()
                     .then((chats) => {
                         if (check.isEmpty(chats)) {
@@ -417,16 +432,15 @@ let chatGroupController = {
 
                 let findQuery = {
                     groupId: req.query.groupId,
-                    "$or": [{
-                            "receiver.receiverId": req.user.userId,
+                    senderId: {
+                        $ne: req.user.userId
+                    },
+                    receiver: {
+                        $elemMatch: {
+                            "receiverId": req.user.userId,
                             "seen": false
-                        },
-                        {
-                            "receiver.receiverId": {
-                                $ne: req.user.userId
-                            }
                         }
-                    ]
+                    }
                 };
 
                 ChatModel.find(findQuery)

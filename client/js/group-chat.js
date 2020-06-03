@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    //Sidebar Events:-
     //-------------------------------------------------
     $("#close-sidebar").click(function() {
         $(".page-wrapper").removeClass("toggled");
@@ -82,8 +83,7 @@ $(document).ready(function() {
         }
 
     });
-
-
+    // Chats Events:-
     //-------------------------------------------------
     socket.on("receive-group", (data) => { //Message received
 
@@ -100,12 +100,13 @@ $(document).ready(function() {
             $(message).find(".time").text(changeTo12Hour(data.createdOn));
             $(message).find(".message-recieved-id").val(data.chatId);
             $(message).find(".message-name").text(data.senderName);
+            $(message).find(".message-sender-id").text(data.senderId);
             $(message).prop("id", "").prop("hidden", false);
             $(parent).append($(message));
 
-            //setUnseenChatsInChatBox([data.chatId], data.groupId);
+            setUnseenChatsInChatBox([data.chatId], { groupId: data.groupId, senderIds: [data.senderId] }, 'group');
         } else {
-            // setUndeliveredMessagesInChatBox([data.chatId], data.groupId);
+            setUndeliveredMessagesInChatBox([data.chatId], { groupId: data.groupId, senderIds: [data.senderId] }, 'group');
         }
 
 
@@ -143,7 +144,7 @@ $(document).ready(function() {
     //-------------------------------------------------
     socket.on("seen-group@" + authToken, (data) => {
 
-        if ($(".group.active .group-id").text() == data.receiverId) {
+        if ($(".group.active .group-id").text() == data.groupId) {
 
             for (let i = 0; i < data.chatIds.length; i++) {
                 let chatId = data.chatIds[i];
@@ -164,7 +165,7 @@ $(document).ready(function() {
     //-------------------------------------------------
     socket.on("delivered-group@" + authToken, (data) => {
 
-        if ($(".group.active .group-id").text() == data.receiverId) {
+        if ($(".group.active .group-id").text() == data.groupId) {
 
             for (let i = 0; i < data.chatIds.length; i++) {
                 let chatId = data.chatIds[i];

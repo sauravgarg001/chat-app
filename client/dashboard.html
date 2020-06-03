@@ -223,7 +223,10 @@
                                 <!-- Message Sent Template ends -->
                                 <!-- Message Recieved Template starts -->
                                 <div class="col-md-12 message-recieved-block mb-2" id="message-recieved-block" hidden>
+                                    <!-- For group messages> -->
                                     <div class="message-name position-absolute font-weight-bold" style="top: -0.65rem; left: 0;font-size: 0.65rem;padding-left: 5px;">Test Name</div>
+                                    <input type="text" class="message-sender-id" hidden/>
+                                    <!-- <For group messages -->
                                     <div class="message-recieved">Test Recieved</div>
                                     <input type="text" class="message-recieved-id" hidden/>
                                     <div class="text-muted time position-absolute" style="bottom: -0.65rem; left: 0;font-size: 0.65rem;padding-left: 5px;">&nbsp;</div>
@@ -290,8 +293,10 @@
     <script src="js/socket.io.js"></script>
     <!-- links dashboard.js -->
     <script src="js/dashboard.js"></script>
-    <!-- links group-sidebar.js -->
-    <script src="js/group-sidebar.js"></script>
+    <!-- links single-chat.js -->
+    <script src="js/single-chat.js"></script>
+    <!-- links group-chat.js -->
+    <script src="js/group-chat.js"></script>
 
 </body>
 

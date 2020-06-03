@@ -97,39 +97,28 @@ let setServer = (server) => {
                     socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' })
                 });
         });
-
         //-------------------------------------------------
-        socket.on('disconnect', () => { // disconnect the user from socket
+        socket.on('configure-groups', (data) => {
+            let groups = data.groups;
 
-            console.log(`${socket.userId} is disconnected`);
-            let userData = {
-                userId: socket.userId,
-                lastSeen: time.now()
-            }
+            token.verifyTokenFromDatabase(data.authToken).then((user) => { //To check whether the user authToken exists
 
-            if (socket.userId) {
-                redis.deleteUserFromHash('onlineUsers', socket.userId);
-                redis.getAllUsersInAHash('onlineUsers')
-                    .then((result) => {
-                        socket.leave(socket.room) // unsubscribe the user from his own channel
-                        socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
-
-                        setTimeout(function() { //save lastSeen after one second delay
-
-                            eventEmitter.emit('save-last-seen', userData);
-
-                        }, 1000);
-                        socket.to(socket.room).broadcast.emit('last-seen', userData);
-                    })
-                    .catch((err) => {
-                        console.log(err);
-                    });
-            }
-
+                if (user.data.userId == data.userId) {
+                    for (let i = 0; i < groups.length; i++) {
+                        // joining chat-group room.
+                        socket.join(groups[i].group_id.groupId);
+                    }
+                    console.log("Groups configured");
+                } else {
+                    console.log("Somewhen tried to send message using " + chatMessage.senderId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' })
+            });
         });
-
         //-------------------------------------------------
-        socket.on('chat-msg', (data) => {
+        socket.on('single-chat-msg', (data) => {
             let chatMessage = data.chatMessage;
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => { //To check whether the user authToken exists
@@ -141,7 +130,7 @@ let setServer = (server) => {
 
                     setTimeout(function() { //save chat after one second delay
 
-                        eventEmitter.emit('save-chat', chatMessage);
+                        eventEmitter.emit('save-single-chat', chatMessage);
 
                     }, 1000);
 
@@ -149,7 +138,7 @@ let setServer = (server) => {
                         .then((result) => {
                             console.log(result[chatMessage.receiverId]);
 
-                            myIo.emit("receive@" + result[chatMessage.receiverId], chatMessage);
+                            myIo.emit("receive-single@" + result[chatMessage.receiverId], chatMessage);
                         })
                         .catch((err) => {
                             console.log(err);
@@ -191,7 +180,7 @@ let setServer = (server) => {
             });
         });
         //-------------------------------------------------
-        socket.on('typing', (data) => {
+        socket.on('typing-single', (data) => {
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
 
@@ -199,7 +188,7 @@ let setServer = (server) => {
 
                     redis.getAllUsersInAHash('onlineUsers')
                         .then((result) => {
-                            myIo.emit('typing@' + result[data.receiverId], data.senderId);
+                            myIo.emit('typing-single@' + result[data.receiverId], data.senderId);
                         })
                         .catch((err) => {
                             console.log(err);
@@ -229,7 +218,7 @@ let setServer = (server) => {
         });
 
         //-------------------------------------------------
-        socket.on('delivered', (data) => {
+        socket.on('delivered-single', (data) => {
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
 
@@ -237,7 +226,7 @@ let setServer = (server) => {
 
                     redis.getAllUsersInAHash('onlineUsers')
                         .then((result) => {
-                            myIo.emit('delivered@' + result[data.senderId], { chatIds: data.chatIds, receiverId: data.receiverId });
+                            myIo.emit('delivered-single@' + result[data.senderId], { chatIds: data.chatIds, receiverId: data.receiverId });
                         })
                         .catch((err) => {
                             console.log(err);
@@ -252,7 +241,46 @@ let setServer = (server) => {
         });
 
         //-------------------------------------------------
-        socket.on('seen', (data) => {
+        socket.on('delivered-group', (data) => {
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.receiverId) {
+
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+
+                            let senderId = data.senderIds[0];
+                            let chatIds = Array();
+
+                            for (let i = 0; i < data.senderIds.length; i++) {
+
+                                chatIds.push(data.chatIds[i]);
+                                if (senderId != data.senderIds[i] ||
+                                    i == data.senderIds.length - 1) {
+                                    socket.to(data.groupId)
+                                        .broadcast.emit("delivered-group@" + result[senderId], { chatIds: chatIds, receiverId: data.receiverId });
+                                    senderId = data.senderIds[i];
+                                    chatIds = Array();
+                                }
+
+                            }
+
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to mark delivered status using " + data.receiverId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
+            });
+        });
+
+        //-------------------------------------------------
+        socket.on('seen-single', (data) => {
 
             console.log('Seen Message: ' + JSON.stringify(data));
 
@@ -262,7 +290,7 @@ let setServer = (server) => {
 
                     redis.getAllUsersInAHash('onlineUsers')
                         .then((result) => {
-                            myIo.emit('seen@' + result[data.senderId], { chatIds: data.chatIds, receiverId: data.receiverId });
+                            myIo.emit('seen-single@' + result[data.senderId], { chatIds: data.chatIds, receiverId: data.receiverId });
                         })
                         .catch((err) => {
                             console.log(err);
@@ -275,38 +303,83 @@ let setServer = (server) => {
                 socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
             });
         });
+
         //-------------------------------------------------
-        socket.on('configure-groups', (data) => {
-            let groups = data.groups;
+        socket.on('seen-group', (data) => {
 
-            token.verifyTokenFromDatabase(data.authToken).then((user) => { //To check whether the user authToken exists
+            console.log('Seen Message: ' + JSON.stringify(data));
 
-                if (user.data.userId == data.userId) {
-                    for (let i = 0; i < groups.length; i++) {
-                        // joining chat-group room.
-                        socket.join(groups[i].group_id.groupId);
-                    }
-                    console.log("Groups configured");
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.receiverId) {
+
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            let senderId = data.senderIds[0];
+                            let chatIds = Array();
+
+                            for (let i = 0; i < data.senderIds.length; i++) {
+
+                                chatIds.push(data.chatIds[i]);
+                                if (senderId != data.senderIds[i] ||
+                                    i == data.senderIds.length - 1) {
+                                    socket.to(data.groupId)
+                                        .broadcast.emit("seen-group@" + result[senderId], { chatIds: chatIds, receiverId: data.receiverId });
+                                    senderId = data.senderIds[i];
+                                    chatIds = Array();
+                                }
+
+                            }
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
                 } else {
-                    console.log("Somewhen tried to send message using " + chatMessage.senderId + " id");
+                    console.log("Somewhen tried to mark seen status using " + data.receiverId + " id");
                 }
             }).catch((err) => {
                 console.log("Auth Error:" + err);
-                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' })
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
             });
         });
 
+        //-------------------------------------------------
+        socket.on('disconnect', () => { // disconnect the user from socket
 
+            console.log(`${socket.userId} is disconnected`);
+            let userData = {
+                userId: socket.userId,
+                lastSeen: time.now()
+            }
 
+            if (socket.userId) {
+                redis.deleteUserFromHash('onlineUsers', socket.userId);
+                redis.getAllUsersInAHash('onlineUsers')
+                    .then((result) => {
+                        socket.leave(socket.room) // unsubscribe the user from his own channel
+                        socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
+
+                        setTimeout(function() { //save lastSeen after one second delay
+
+                            eventEmitter.emit('save-last-seen', userData);
+
+                        }, 1000);
+                        socket.to(socket.room).broadcast.emit('last-seen', userData);
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                    });
+            }
+
+        });
     });
-
 }
 
 
 /* Database operations are kept outside of socket.io code. */
 
 // Saving chats to database.
-eventEmitter.on('save-chat', (data) => {
+eventEmitter.on('save-single-chat', (data) => {
 
     let newChat = new SingleChatModel({
 

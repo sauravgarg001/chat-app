@@ -27,15 +27,15 @@ router.route('/single/lastchat').get(auth.isAuthorized, singleController.getUser
 //Group
 router.route('/group/seen').get(auth.isAuthorized, groupController.getGroupSeenChat);
 
-// router.route('/group/seen/mark').put(auth.isAuthorized, groupController.markGroupChatAsSeen);
+router.route('/group/seen/mark').put(auth.isAuthorized, groupController.markGroupChatSeen);
 
-// router.route('/group/delivered/mark').put(auth.isAuthorized, groupController.markGroupChatAsDelivered);
+router.route('/group/delivered/mark').put(auth.isAuthorized, groupController.markGroupChatDelivered);
 
 router.route('/group/delivered/mark/all').put(auth.isAuthorized, groupController.markAllGroupChatDelivered);
 
 router.route('/group/unseen/count').get(auth.isAuthorized, groupController.countGroupUnSeenChat);
 
-// router.route('/group/unseen').get(auth.isAuthorized, groupController.getGroupUnseenChat);
+router.route('/group/unseen').get(auth.isAuthorized, groupController.getGroupUnSeenChat);
 
 router.route('/group/lastchat').get(auth.isAuthorized, groupController.getGroupLastChats);
 

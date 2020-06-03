@@ -5,10 +5,10 @@ const userId = getCookie("userId");
 let userName = "";
 let skip = 0;
 
+//=======================================================================================================
 $(document).ready(function() {
 
-    //=======================================================================================================
-
+    //---------------------------------------------------------------------------------------------------
     function initialize() {
 
         if (!authToken || !userId)
@@ -117,7 +117,7 @@ $(document).ready(function() {
                     }, "json");
             });
         };
-
+        //*****************************************************
         let getUserInfo = () => {
             return new Promise((resolve, reject) => {
                 $.get(`${baseUrl}/user/`, { authToken: authToken },
@@ -167,8 +167,7 @@ $(document).ready(function() {
                     "json");
             });
         };
-
-
+        //*****************************************************
         let markUndeliveredSingleChats = () => {
             return new Promise((resolve, reject) => {
 
@@ -201,8 +200,9 @@ $(document).ready(function() {
                                             receiverId: userId
                                         };
                                         socket.emit("delivered", query);
+                                        senderId = undeliveredChats[i].senderId;
+                                        chatIds = Array();
                                     }
-                                    chatIds = Array();
                                 }
 
                             }
@@ -217,8 +217,8 @@ $(document).ready(function() {
                     }
                 });
             });
-        }
-
+        };
+        //*****************************************************
         let markUndeliveredGroupChats = () => {
             return new Promise((resolve, reject) => {
 
@@ -238,20 +238,26 @@ $(document).ready(function() {
 
                                 let groupId = undeliveredChats[0].groupId;
                                 let chatIds = Array();
+                                let senderIds = Array();
 
                                 for (let i = 0; i < undeliveredChats.length; i++) {
 
                                     chatIds.push(undeliveredChats[i].chatId);
+                                    senderIds.push(undeliveredChats[i].senderId);
                                     if (groupId != undeliveredChats[i].groupId ||
                                         i == undeliveredChats.length - 1) {
                                         let query = {
                                             chatIds: chatIds,
                                             groupId: groupId,
-                                            authToken: authToken
+                                            authToken: authToken,
+                                            senderIds: senderIds
                                         };
                                         socket.emit("delivered-group", query);
+                                        groupId = undeliveredChats[i].groupId;
+                                        chatIds = Array();
+                                        senderIds = Array();
                                     }
-                                    chatIds = Array();
+
                                 }
 
                             }
@@ -266,9 +272,8 @@ $(document).ready(function() {
                     }
                 });
             });
-        }
-
-
+        };
+        //*****************************************************
         let getSingleLastChat = () => {
             return new Promise((resolve, reject) => {
 
@@ -300,8 +305,8 @@ $(document).ready(function() {
                     }
                 });
             });
-        }
-
+        };
+        //*****************************************************
         let getGroupLastChat = () => {
             return new Promise((resolve, reject) => {
 
@@ -357,8 +362,8 @@ $(document).ready(function() {
                     }
                 });
             });
-        }
-
+        };
+        //*****************************************************
         let countUnseenSingleChats = () => {
             return new Promise((resolve, reject) => {
 
@@ -379,13 +384,12 @@ $(document).ready(function() {
                     }
                 });
             });
-        }
-
+        };
+        //*****************************************************
         let countUnseenGroupChats = () => {
             return new Promise((resolve, reject) => {
 
                 $.get(`${baseUrl}/chat/group/unseen/count`, { authToken: authToken }, function(response, status, xhr) {
-                    console.log(response);
 
                     if (response.status == 200) {
                         let data = response.data;
@@ -425,7 +429,7 @@ $(document).ready(function() {
 
     initialize();
 
-    //=======================================================================================================
+    //---------------------------------------------------------------------------------------------------
 
     $("#sender-search").on('keyup change', function() {
         let text = $(this).val().toLowerCase();
@@ -461,133 +465,25 @@ $(document).ready(function() {
 
     });
     //-------------------------------------------------
-    socket.on("last-seen", (user) => {
-        let sender = $(`.sender .sender-id:contains(${user.userId})`).parents(".sender");
-        $(sender).find(".sender-message-status").hide();
-        if (formatDate(user.lastSeen) == formatDate(new Date()))
-            $(sender).find(".sender-last-seen-text").text(changeTo12Hour(user.lastSeen));
-        else
-            $(sender).find(".sender-last-seen-text").text(formatDate(user.lastSeen) + " " + changeTo12Hour(user.lastSeen));
-        $(sender).find(".sender-last-seen").show();
-
-    });
-    //-------------------------------------------------
-    socket.on("receive@" + authToken, (data) => { //Message received
-
-        let sender = $(`.sender .sender-name:contains(${data.senderName})`).parents(".sender"); //get sender's element who's message came
-
-        //Add message to chatbox
-        if ($(sender).hasClass("active")) { //Check if the user has openned the chat of the person who's message came
-            $("#no-message").hide()
-            $('#unread-messages').hide();
-
-            let parent = $("#message-recieved-block").parent();
-            let message = $("#message-recieved-block").clone();
-            $(message).find(".message-recieved").text(data.message);
-            $(message).find(".time").text(changeTo12Hour(data.createdOn));
-            $(message).find(".message-recieved-id").val(data.chatId);
-            $(message).find(".message-name").text(data.senderName);
-            $(message).prop("id", "").prop("hidden", false);
-            $(parent).append($(message));
-
-            setUnseenChatsInChatBox([data.chatId], data.senderId);
-        } else {
-            setUndeliveredMessagesInChatBox([data.chatId], data.senderId);
-        }
-
-
-        //Add message to userlist
-        $(sender).find(".sender-message").text(data.message);
-        $(sender).find(".sender-message-date").text(" ");
-        $(sender).find(".sender-message-time").text(changeTo12Hour(data.createdOn));
-
-        let unreadCount = parseInt($(sender).find(".sender-unread-messages-count").text()) + 1;
-        $(sender).find(".sender-unread-messages-count").text(unreadCount);
-        $(sender).find(".sender-unread-messages-count").show();
-
-
-        let parent = $(sender).parent();
-        let clone = $(sender).clone();
-        $(sender).remove();
-        $(parent).prepend($(clone));
-        sender = clone;
-
-        $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
-
-    });
-    //-------------------------------------------------
     $("#message").on('keypress', function() {
+        let apiType;
+        let data = {
+            senderId: userId,
+            senderName: name,
+            authToken: authToken
+        };
 
         if ($("#chatBox").hasClass(".group-message")) {
-            let data = {
-                senderId: userId,
-                senderName: name,
-                groupId: $(".group.active").find(".group-id").text(),
-                authToken: authToken
-            };
-            socket.emit("typing-group", data);
+            apiType = 'group';
+
+            data['groupId'] = $(".group.active").find(".group-id").text();
         } else {
-            let data = {
-                senderId: userId,
-                receiverId: $(".sender.active").find(".sender-id").text(),
-                authToken: authToken
-            };
-            socket.emit("typing", data);
+            apiType = 'single';
+
+            data['receiverId'] = $(".sender.active").find(".sender-id").text();
         }
 
-    });
-    //-------------------------------------------------
-    socket.on("typing@" + authToken, (id) => {
-        setTimeout(function() {
-            let sender = $(`.sender .sender-id:contains(${id})`).parent();
-            $(sender).find(".sender-message-typing").hide();
-            $(sender).find(".sender-message").show();
-        }, 500);
-        let sender = $(`.sender .sender-id:contains(${id})`).parent();
-        $(sender).find(".sender-message").hide();
-        $(sender).find(".sender-message-typing").show();
-
-    });
-    //-------------------------------------------------
-    socket.on("seen@" + authToken, (data) => {
-
-        if ($(".sender.active .sender-id").text() == data.receiverId) {
-
-            for (let i = 0; i < data.chatIds.length; i++) {
-                let chatId = data.chatIds[i];
-                $(".message-sent-id").each(function() {
-                    if ($(this).val() == chatId) {
-                        let parent = $(this).parent();
-
-                        $(parent).find(".status-sent").hide();
-                        $(parent).find(".status-delivered").hide();
-                        $(parent).find(".status-seen").slideDown();
-                        return false;
-                    }
-                });
-            }
-        }
-
-    });
-    //-------------------------------------------------
-    socket.on("delivered@" + authToken, (data) => {
-
-        if ($(".sender.active .sender-id").text() == data.receiverId) {
-
-            for (let i = 0; i < data.chatIds.length; i++) {
-                let chatId = data.chatIds[i];
-                $(".message-sent-id").each(function() {
-                    if ($(this).val() == chatId) {
-                        let parent = $(this).parent();
-
-                        $(parent).find(".status-sent").hide();
-                        $(parent).find(".status-delivered").slideDown();
-                        $(parent).find(".status-seen").hide();
-                        return false;
-                    }
-                });
-            }
-        }
+        socket.emit(`typing-${apiType}`, data);
 
     });
     //-------------------------------------------------
@@ -609,7 +505,10 @@ $(document).ready(function() {
             message: $("#message").val()
         }
 
+        let apiType;
         if ($("#chatBox").hasClass('group-message')) {
+
+            apiType = 'group';
 
             chatMessage['groupId'] = $(".group.active").find(".group-id").text();
             chatMessage['groupName'] = $(".group.active").find(".group-name").text();
@@ -625,6 +524,8 @@ $(document).ready(function() {
             $(parent).prepend($(clone));
 
         } else {
+
+            apiType = 'single';
 
             chatMessage['receiverId'] = $(".sender.active").find(".sender-id").text();
             chatMessage['receiverName'] = $(".sender.active").find(".sender-name").text();
@@ -660,11 +561,8 @@ $(document).ready(function() {
         $("#no-message").hide()
         $('#unread-messages').hide();
 
-        if ($("#chatBox").hasClass('group-message')) {
-            socket.emit("group-chat-msg", data)
-        } else {
-            socket.emit("chat-msg", data)
-        }
+        socket.emit(`${apiType}-chat-msg`, data)
+
         socket.on("getChatId@" + authToken, function(chatId) {
             $(message).find(".message-sent-id").val(chatId);
         });
@@ -679,7 +577,7 @@ $(document).ready(function() {
             apiType = 'group';
             $("#chatBox").addClass("group-message"); //add group template from chatbox
         } else {
-            apiType = 'single'
+            apiType = 'single';
             $("#chatBox").removeClass("group-message"); //Remove group template from chatbox
         }
 
@@ -720,12 +618,15 @@ $(document).ready(function() {
             id = $(this).find(".sender-id").text();
             name = $(this).find(".sender-name").text();
         }
+        let noMessages = true;
+
+        //Local Function-->
 
         let getUnseenChats = () => { //Get all unseen chat
             return new Promise((resolve, reject) => {
 
                 let date = formatDate(new Date()); //Today's Date
-                if (blocked || apiType == 'group')
+                if (blocked)
                     resolve(date);
                 else {
 
@@ -744,9 +645,10 @@ $(document).ready(function() {
                             if (unseenChats) {
                                 console.log("Unseen Chat Found");
                                 let unseenMessages = Array();
-
+                                let senderIds = Array();
                                 for (let i = 0; i < unseenChats.length; i++) {
                                     unseenMessages.push(unseenChats[i].chatId);
+                                    senderIds.push(unseenChats[i].senderId);
 
                                     let chatCreatedOn = formatDate(unseenChats[i].createdOn);
                                     if (chatCreatedOn != date) {
@@ -774,8 +676,12 @@ $(document).ready(function() {
 
                                 }
 
-                                setUnseenChatsInChatBox(unseenMessages, id);
-
+                                if (apiType == 'group') {
+                                    setUnseenChatsInChatBox(unseenMessages, { groupId: id, senderIds: senderIds }, apiType);
+                                } else {
+                                    setUnseenChatsInChatBox(unseenMessages, id, apiType);
+                                }
+                                noMessages = false;
                             } else {
                                 console.log("No Unseen Chat for " + name);
                             }
@@ -786,8 +692,8 @@ $(document).ready(function() {
                     });
                 }
             });
-        }
-
+        };
+        //*****************************************************
         let getSeenChats = (date) => { //Get all seen chat
             return new Promise((resolve, reject) => {
 
@@ -868,9 +774,18 @@ $(document).ready(function() {
 
                                 }
                             }
-
+                            noMessages = false;
                             resolve();
                         } else {
+                            let parentDate = $("#date").parent();
+                            let newDate = $("#date").clone();
+                            $(newDate).prop("hidden", false).prop("id", "");
+                            if (date == formatDate(new Date()))
+                                $(newDate).text("Today");
+                            else
+                                $(newDate).text(date);
+                            $(parentDate).prepend($(newDate));
+
                             reject("No Seen Chat for " + name);
                         }
                     } else {
@@ -879,8 +794,8 @@ $(document).ready(function() {
 
                 }, "json");
             });
-        }
-
+        };
+        //*****************************************************
         let loadOldMessages = () => { //If there is no vertical scrollbar load more messages if possible
             return new Promise((resolve, reject) => {
                 $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
@@ -894,16 +809,20 @@ $(document).ready(function() {
             });
         }
 
+        //<--Local Function
 
         getUnseenChats()
             .then(getSeenChats)
             .then(loadOldMessages)
             .then(() => {
-                $("#no-message").hide()
+                $("#no-message").hide();
             })
             .catch((err) => {
+                if (noMessages)
+                    $("#no-message").show()
+                else
+                    $("#no-message").hide()
                 console.log(err);
-                $("#no-message").show()
             });
 
     });
@@ -1015,106 +934,9 @@ $(document).ready(function() {
             }, "json");
         }
     });
-    //-------------------------------------------------
-    $('body').on('click', '.sender-dropdown-spam', function(e) {
-        let sender = $(this).parents(".sender");
-        let id = $(sender).find(".sender-id").text();
-        //Send API
-        let object = {
-            userId: id,
-            authToken: authToken
-        }
-        let json = JSON.stringify(object);
-
-        $.ajax({
-            type: 'PUT', // Type of request to be send, called as method
-            url: `${baseUrl}/user/spam`, // Url to which the request is send
-            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
-            cache: false, // To unable request pages to be cached
-            contentType: 'application/json', // The content type used when sending data to the server.
-            processData: false, // To send DOMDocument or non processed data file it is set to false
-            success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
-                $(sender).remove();
-            },
-            error: function(response) { // A function to be called if request failed
-                console.error(response);
-            }
-        });
-    });
-    //-------------------------------------------------
-    $('body').on('click', '.sender-dropdown-block', function(e) {
-        let sender = $(this).parents(".sender");
-        let id = $(sender).find(".sender-id").text();
-        //Send API
-        let object = {
-            userId: id,
-            authToken: authToken
-        }
-        let json = JSON.stringify(object);
-
-        $.ajax({
-            type: 'PUT', // Type of request to be send, called as method
-            url: `${baseUrl}/user/block`, // Url to which the request is send
-            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
-            cache: false, // To unable request pages to be cached
-            contentType: 'application/json', // The content type used when sending data to the server.
-            processData: false, // To send DOMDocument or non processed data file it is set to false
-            success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
-                $(sender).find('.sender-dropdown-block').hide();
-                $(sender).find('.sender-dropdown-unblock').show();
-                $(sender).find('.sender-blocked').show();
-                $(sender).addClass('blocked');
-                if ($(sender).hasClass('active'))
-                    $(sender).trigger('click');
-
-                let user = $(`.user .user-id:contains(${id})`).parents(".user");
-                $(user).find('.user-blocked').show();
-            },
-            error: function(response) { // A function to be called if request failed
-                console.error(response);
-            }
-        });
-    });
-    //-------------------------------------------------
-    $('body').on('click', '.sender-dropdown-unblock', function(e) {
-        let sender = $(this).parents(".sender");
-        let id = $(sender).find(".sender-id").text();
-        //Send API
-        let object = {
-            userId: id,
-            authToken: authToken
-        }
-        let json = JSON.stringify(object);
-
-        $.ajax({
-            type: 'PUT', // Type of request to be send, called as method
-            url: `${baseUrl}/user/unblock`, // Url to which the request is send
-            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
-            cache: false, // To unable request pages to be cached
-            contentType: 'application/json', // The content type used when sending data to the server.
-            processData: false, // To send DOMDocument or non processed data file it is set to false
-            success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
-                $(sender).find('.sender-dropdown-unblock').hide();
-                $(sender).find('.sender-blocked').hide();
-                $(sender).find('.sender-dropdown-block').show();
-                $(sender).removeClass('blocked');
-                if ($(sender).hasClass('active'))
-                    $(sender).trigger('click');
-
-                let user = $(`.user .user-id:contains(${id})`).parents(".user");
-                $(user).find('.user-blocked').hide();
-            },
-            error: function(response) { // A function to be called if request failed
-                console.error(response);
-            }
-        });
-    });
 });
-//---------------------------------------------------------------------------------------------------------------
-function setUnseenChatsInChatBox(unseenMessages, id) {
+//=======================================================================================================
+function setUnseenChatsInChatBox(unseenMessages, id, apiType) {
 
     let parent = $("#unread-messages").parent();
     let element = $("#unread-messages");
@@ -1126,24 +948,36 @@ function setUnseenChatsInChatBox(unseenMessages, id) {
 
     let query = {
         chatIds: unseenMessages,
-        senderId: id,
         authToken: authToken,
         receiverId: userId
     };
-    socket.emit("seen", query);
+
+    if (apiType == 'group') {
+        query['groupId'] = id.groupId;
+        query['senderId'] = id.senderId;
+    } else {
+        query['senderId'] = id;
+    }
+
+    socket.emit(`seen-${apiType}`, query);
 
     setTimeout(function() {
         $("#unread-messages").fadeOut();
         $("#unread-messages-count").text(0);
-        let parent = $(`.sender .sender-id:contains(${id})`).parent();
-        $(parent).find(".sender-unread-messages-count").text(0).hide();
+        if (apiType == 'group') {
+            let parent = $(`.group .group-id:contains(${id})`).parent();
+            $(parent).find(".group-unread-messages-count").text(0).hide();
+        } else {
+            let parent = $(`.sender .sender-id:contains(${id})`).parent();
+            $(parent).find(".sender-unread-messages-count").text(0).hide();
+        }
 
-        markChatAsSeen(unseenMessages);
+        markChatAsSeen(unseenMessages, apiType);
     }, 1000);
 
 }
 
-function markChatAsSeen(unseenMessages) {
+function markChatAsSeen(unseenMessages, apiType) {
     //Send API
     let object = {
         chatIds: unseenMessages,
@@ -1153,7 +987,7 @@ function markChatAsSeen(unseenMessages) {
 
     $.ajax({
         type: 'PUT', // Type of request to be send, called as method
-        url: `${baseUrl}/chat/single/seen/mark`, // Url to which the request is send
+        url: `${baseUrl}/chat/${apiType}/seen/mark`, // Url to which the request is send
         data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
         cache: false, // To unable request pages to be cached
         contentType: 'application/json', // The content type used when sending data to the server.
@@ -1167,22 +1001,28 @@ function markChatAsSeen(unseenMessages) {
     });
 }
 
-function setUndeliveredMessagesInChatBox(undeliveredMessages, id) {
-
+function setUndeliveredMessagesInChatBox(undeliveredMessages, id, apiType) {
     let query = {
         chatIds: undeliveredMessages,
-        senderId: id,
         authToken: authToken,
         receiverId: userId
     };
-    socket.emit("delivered", query);
+
+    if (apiType == 'group') {
+        query['groupId'] = id.groupId;
+        query['senderIds'] = id.senderIds;
+    } else {
+        query['senderId'] = id;
+    }
+
+    socket.emit(`delivered-${apiType}`, query);
     setTimeout(function() {
-        markChatAsDelivered(undeliveredMessages);
+        //markChatAsDelivered(undeliveredMessages, apiType);
     }, 1000);
 
 }
 
-function markChatAsDelivered(undeliveredMessages) {
+function markChatAsDelivered(undeliveredMessages, apiType) {
     //Send API
     let object = {
         chatIds: undeliveredMessages,
@@ -1193,7 +1033,7 @@ function markChatAsDelivered(undeliveredMessages) {
 
     $.ajax({
         type: 'PUT', // Type of request to be send, called as method
-        url: `${baseUrl}/chat/single/delivered/mark`, // Url to which the request is send
+        url: `${baseUrl}/chat/${apiType}/delivered/mark`, // Url to which the request is send
         data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
         cache: false, // To unable request pages to be cached
         contentType: 'application/json', // The content type used when sending data to the server.
