@@ -63,14 +63,6 @@ let chatSchema = new Schema({
         type: Date,
         default: Date.now
     },
-    seen: {
-        type: Boolean,
-        default: false
-    },
-    delivered: {
-        type: Boolean,
-        default: false
-    },
     modifiedOn: {
         type: Date,
         default: Date.now

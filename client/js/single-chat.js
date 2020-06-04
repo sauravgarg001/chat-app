@@ -62,7 +62,7 @@ $(document).ready(function() {
             let sender = $(`.sender .sender-id:contains(${id})`).parent();
             $(sender).find(".sender-message-typing").hide();
             $(sender).find(".sender-message").show();
-        }, 500);
+        }, 1000);
         let sender = $(`.sender .sender-id:contains(${id})`).parent();
         $(sender).find(".sender-message").hide();
         $(sender).find(".sender-message-typing").show();

@@ -8,7 +8,9 @@ const groupController = require("../controllers/groupController");
 const auth = require('../middlewares/auth')
 
 
-router.route('/').post(auth.isAuthorized, groupController.createGroup);
+router.route('/')
+    .post(auth.isAuthorized, groupController.createGroup)
+    .get(auth.isAuthorized, groupController.getGroup);
 
 router.route('/all').get(auth.isAuthorized, groupController.getAllGroups);
 

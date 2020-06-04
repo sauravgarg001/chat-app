@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const response = require('../libs/responseLib');
 const logger = require('../libs/loggerLib');
 const check = require('../libs/checkLib');
+const time = require('../libs/timeLib');
 
 //Models
 const ChatModel = mongoose.model('GroupChat');
@@ -134,7 +135,8 @@ let chatGroupController = {
 
                 let updateQuery = {
                     $set: {
-                        'receiver.$[i].seen': true
+                        'receiver.$[i].seen': true,
+                        'receiver.$[i].modifiedOn': time.now()
                     }
                 }
 
@@ -146,7 +148,6 @@ let chatGroupController = {
                         "i.delivered": true,
                         "i.seen": false,
                     }]
-
                 }
 
                 ChatModel.update(findQuery, updateQuery, options)
@@ -156,8 +157,41 @@ let chatGroupController = {
                             logger.info('No Chat Found', 'chatGroupController: markGroupChatSeen(): modifyChat()');
                             reject(response.generate(true, 'No Chat Found', 404, null));
                         } else {
-                            logger.info('Chat Updated', 'chatGroupController: markGroupChatSeen(): modifyChat()');
-                            resolve(result)
+                            if (result.nModified == 0) {
+                                logger.info('Chat was not delivered', 'chatGroupController: markGroupChatSeen(): modifyChat()');
+                                let updateQuery = {
+                                    $addToSet: {
+                                        receiver: {
+                                            receiverId: req.user.userId,
+                                            receiverName: req.user.userName,
+                                            delivered: true,
+                                            seen: true
+                                        }
+                                    }
+                                }
+
+                                ChatModel.update(findQuery, updateQuery, {
+                                        multi: true, //to update many
+                                        upsert: true
+                                    })
+                                    .exec()
+                                    .then((result) => {
+                                        if (result.n === 0) {
+                                            logger.info('No Chat Found', 'chatGroupController: markGroupChatSeen(): modifyChat()');
+                                            reject(response.generate(true, 'No Chat Found', 404, null));
+                                        } else {
+                                            logger.info('Chat Updated', 'chatGroupController: markGroupChatSeen(): modifyChat()');
+                                            resolve(result)
+                                        }
+                                    })
+                                    .catch((err) => {
+                                        logger.error(err.message, 'chatGroupController: markGroupChatSeen(): modifyChat()', 10);
+                                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                                    });
+                            } else {
+                                logger.info('Chat Updated', 'chatGroupController: markGroupChatSeen(): modifyChat()');
+                                resolve(result)
+                            }
                         }
                     })
                     .catch((err) => {
@@ -564,6 +598,129 @@ let chatGroupController = {
             .then(findLastChat)
             .then((chats) => {
                 res.send(response.generate(false, 'chat found and listed.', 200, chats))
+            })
+            .catch((error) => {
+                res.send(error)
+            });
+    },
+
+    getChatSeenBy: (req, res) => {
+        //Local Function Start-->
+
+        let validateParams = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.params.chatId)) {
+                    logger.error('Parameters Missing', 'chatGroupController: getChatSeenBy(): validateParams()', 9);
+                    reject(response.generate(true, 'parameters missing.', 403, null));
+                } else {
+                    logger.info('Parameters Validated', 'chatGroupController: getChatSeenBy(): validateParams()', 9);
+                    resolve();
+                }
+            });
+        }
+
+        let findReceiver = () => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    chatId: req.params.chatId,
+                    senderId: req.user.userId,
+                    receiver: {
+                        $elemMatch: {
+                            delivered: true,
+                            seen: true
+                        }
+                    }
+                };
+
+                ChatModel.findOne(findQuery, { _id: 0, receiver: 1 })
+                    .sort('-receiver.createdOn')
+                    .exec()
+                    .then((chat) => {
+                        if (check.isEmpty(chat)) {
+                            logger.info('No Chat Found', 'chatGroupController: getChatSeenBy(): findReceiver()');
+                            reject(response.generate(true, 'No Chat Found', 200, null));
+                        } else {
+                            logger.info('Chat Seen By Found', 'chatGroupController: getChatSeenBy(): findReceiver()');
+                            resolve(chat.receiver)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupControllerr: getChatSeenBy(): findReceiver()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
+
+        //<--Local Functions End
+
+        validateParams()
+            .then(findReceiver)
+            .then((receivers) => {
+                res.send(response.generate(false, 'chat seen by found and listed.', 200, receivers))
+            })
+            .catch((error) => {
+                res.send(error)
+            });
+    },
+
+    getChatDeliveredTo: (req, res) => {
+        //Local Function Start-->
+
+        let validateParams = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.params.chatId)) {
+                    logger.error('Parameters Missing', 'chatGroupController: getChatDeliveredTo(): validateParams()', 9);
+                    reject(response.generate(true, 'parameters missing.', 403, null));
+                } else {
+                    logger.info('Parameters Validated', 'chatGroupController: getChatDeliveredTo(): validateParams()', 9);
+                    resolve();
+                }
+            });
+        }
+
+        let findReceiver = () => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    chatId: req.params.chatId,
+                    senderId: req.user.userId,
+                    receiver: {
+                        $elemMatch: {
+                            delivered: true,
+                            seen: false
+                        }
+                    }
+                };
+
+                console.log(JSON.stringify(findQuery));
+
+
+                ChatModel.findOne(findQuery, { _id: 0, receiver: 1 })
+                    .sort('-receiver.createdOn')
+                    .exec()
+                    .then((chat) => {
+                        if (check.isEmpty(chat)) {
+                            logger.info('No Chat Found', 'chatGroupController: getChatDeliveredTo(): findReceiver()');
+                            reject(response.generate(true, 'No Chat Found', 200, null));
+                        } else {
+                            logger.info('Chat Seen By Found', 'chatGroupController: getChatDeliveredTo(): findReceiver()');
+                            resolve(chat.receiver)
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupControllerr: getChatDeliveredTo(): findReceiver()', 10);
+                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                    });
+            });
+        }
+
+        //<--Local Functions End
+
+        validateParams()
+            .then(findReceiver)
+            .then((receivers) => {
+                res.send(response.generate(false, 'chat seen by found and listed.', 200, receivers))
             })
             .catch((error) => {
                 res.send(error)

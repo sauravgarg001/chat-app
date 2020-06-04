@@ -104,7 +104,6 @@ let groupController = {
                                 group = group.toObject();
 
                                 delete group.__v;
-                                delete group.chats;
                                 delete group.modifiedOn;
 
                                 resolve({ group: group, members: members })
@@ -343,8 +342,60 @@ let groupController = {
                 res.send(err);
             });
 
-    }
+    },
 
+    getGroup: (req, res) => {
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.query.groupId)) {
+                    logger.error('Missing Field', 'groupController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'groupController: validateField()', 10);
+                    resolve(req.user.userId);
+                }
+            });
+        }
+
+        let getGroupInfo = (user_id) => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    groupId: req.query.groupId,
+                    members: {
+                        $elemMatch: {
+                            user_id: user_id
+                        }
+                    }
+                };
+
+                GroupModel.findOne(findQuery, { _id: 0, __v: 0, modifiedOn: 0 })
+                    .populate('members.user_id', '-_id userId firstName lastName')
+                    .exec()
+                    .then((group) => {
+                        logger.info('Group Found', 'groupController: getGroupInfo', 10);
+                        resolve(group)
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: getGroupInfo', 10);
+                        reject(response.generate(true, 'Failed to get group details', 403, null));
+                    });
+            });
+        }
+
+        validateField(req, res)
+            .then(findUserAndGetObjectId)
+            .then(getGroupInfo)
+            .then((group) => {
+                res.status(200);
+                res.send(response.generate(false, 'Group fetched', 200, group));
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+    }
 }
 
 module.exports = groupController;

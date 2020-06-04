@@ -207,7 +207,7 @@ let setServer = (server) => {
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
 
                 if (user.data.userId == data.senderId) {
-                    socket.to(data.groupId).broadcast.emit("typing-group", data.groupId, data.senderName);
+                    socket.to(data.groupId).broadcast.emit("typing-group", { groupId: data.groupId, senderName: data.senderName });
                 } else {
                     console.log("Somewhen tried to check typing status using " + data.senderId + " id");
                 }

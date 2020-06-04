@@ -64,6 +64,99 @@
 
                 </div>
             </nav>
+            <!-- Group Info SideBar -->
+            <nav id="members-sidebar" class="sidebar-members-wrapper">
+                <div class="sidebar-content">
+                    <div id="close-members-sidebar" class="float-right mr-2" style="font-size: 1.5rem;">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    <!-- sidebar-header  -->
+                    <div class="h4 text-white font-weight-bold">Group Members:</div>
+                    <div id="members-users-list" style="overflow-x: hidden;">
+                        <div class="card members-user" id="members-user" hidden>
+                            <div class="row">
+                                <!-- Group Members Template starts -->
+                                <p class="user-id" hidden></p>
+                                <div class="col-md-1 col-3 user-img">
+                                    <div class="img h2 text-dark">&nbsp;</div>
+                                    <!-- <img src="https://meetanentrepreneur.lu/wp-content/uploads/2019/08/profil-linkedin.jpg" class="card-img"> -->
+                                </div>
+                                <div class="col-9 user-text">
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <span class="user-name text-white">Name</span>
+                                            <!-- .group-dropdown-menu starts -->
+                                            <span class="float-right group-dropdown-menu-link" hidden role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                &nbsp;<i class="fas fa-chevron-circle-down"></i>
+                                            </span>
+                                            <div class="dropdown-menu group-dropdown-menu">
+                                                <a class="dropdown-item group-dropdown-make-admin" href="#">Make admin</a>
+                                                <a class="dropdown-item group-dropdown-remove-admin" href="#">Remove as admin</a>
+                                                <a class="dropdown-item group-dropdown-remove" href="#">Remove member</a>
+                                            </div>
+                                            <!-- .group-dropdown-menu ends -->
+                                            <small class="float-right user-admin btn btn-outline-success" style="display: none;" style="pointer-events: none;">Group Admin</small>
+                                        </h5>
+                                    </div>
+                                </div>
+                                <!-- Group User Template ends -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            <!-- Chat SideBar -->
+            <nav id="chat-sidebar" class="sidebar-chat-wrapper">
+                <div class="sidebar-content">
+                    <div id="close-chat-sidebar" class="float-right mr-2" style="font-size: 1.5rem;">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    <!-- sidebar-header  -->
+                    <div class="h4 text-white font-weight-bold">Seen By:</div>
+                    <div id="seen-users-list" style="overflow-x: hidden;">
+                        <div class="card seen-user" id="seen-user">
+                            <div class="row">
+                                <!-- Group User Template starts -->
+                                <p class="user-id" hidden></p>
+                                <div class="col-md-1 col-3 user-img">
+                                    <div class="img h2 text-dark"><i class="fas fa-times"></i></div>
+                                    <!-- <img src="https://meetanentrepreneur.lu/wp-content/uploads/2019/08/profil-linkedin.jpg" class="card-img"> -->
+                                </div>
+                                <div class="col-9 user-text">
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <span class="user-name text-white">None</span>
+                                        </h5>
+                                    </div>
+                                </div>
+                                <!-- Group User Template ends -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="h4 text-white font-weight-bold">Delivered To:</div>
+                    <div id="delivered-users-list" style="overflow-x: hidden;">
+                        <div class="card delivered-user" id="delivered-user">
+                            <div class="row">
+                                <!-- Group User Template starts -->
+                                <p class="user-id" hidden></p>
+                                <div class="col-md-1 col-3 user-img">
+                                    <div class="img h2 text-dark"><i class="fas fa-times"></i></div>
+                                    <!-- <img src="https://meetanentrepreneur.lu/wp-content/uploads/2019/08/profil-linkedin.jpg" class="card-img"> -->
+                                </div>
+                                <div class="col-9 user-text">
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <span class="user-name text-white">None</span>
+                                        </h5>
+                                    </div>
+                                </div>
+                                <!-- Group User Template ends -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </nav>
             <!-- .row starts -->
             <div class="row mt-3">
                 <div class="col-lg-4 col-4 border border-info offset-lg-1 border-right-0 p-0 rounded" style="height: 95vh;overflow-y: auto;overflow-x: hidden;">
@@ -150,11 +243,10 @@
                                             &nbsp;<i class="fas fa-chevron-circle-down"></i>
                                         </span>
                                             <div class="dropdown-menu group-dropdown-menu">
-                                                <a class="dropdown-item group-dropdown-spam" href="#">Report spam</a>
-                                                <a class="dropdown-item group-dropdown-exit" href="#">Exit group</a>
-                                                <a class="dropdown-item group-dropdown-remove" href="#">Remove member</a>
-                                                <a class="dropdown-item group-dropdown-add" href="#">Add member</a>
                                                 <a class="dropdown-item group-dropdown-info" href="#">Group info</a>
+                                                <a class="dropdown-item group-dropdown-add" href="#">Add member</a>
+                                                <a class="dropdown-item group-dropdown-exit" href="#">Exit group</a>
+                                                <a class="dropdown-item group-dropdown-spam" href="#">Report spam</a>
                                             </div>
                                             <!-- .group-dropdown-menu ends -->
                                             <small class="float-right group-unread-messages-count text-success" style="display: none;">0</small>
@@ -211,6 +303,7 @@
 
                                     <input type="text" class="message-sent-id" hidden/>
                                     <div class="message-sent">Test Sent</div>
+                                    <a class="float-right text-info message-info" title="Message info"><i class="fas fa-info-circle">&nbsp;</i></a>
                                     <div class="text-muted time position-absolute" style="bottom: -0.65rem; right: 1.25rem;font-size: 0.65rem;">&nbsp;</div>
                                     <div class="text-muted status-sent position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check"></i></div>
                                     <div class="text-muted status-delivered position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>

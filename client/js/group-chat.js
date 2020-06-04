@@ -1,21 +1,115 @@
 $(document).ready(function() {
     //Sidebar Events:-
     //-------------------------------------------------
-    $("#close-sidebar").click(function() {
-        $(".page-wrapper").removeClass("toggled");
+    $("#close-members-sidebar").click(function() {
+        $(".page-wrapper").removeClass("toggled3");
     });
     //-------------------------------------------------
-    $("#show-sidebar").click(function() {
+    $('body').on('click', '.group-dropdown-info', function(e) {
+        let groupId = $(this).parents('.group').find('.group-id').text();
 
-        if ($(".page-wrapper").hasClass("toggled")) {
-            $("#close-sidebar").trigger('click');
+        $(".members-user:not(#members-user)").remove();
+        $.get(`${baseUrl}/group/`, { authToken: authToken, groupId: groupId }, function(response, status, xhr) {
+            if (response.status == 200) {
+                let members = response.data.members;
+
+                if (members) {
+                    let admin = false;
+                    for (let i = 0; i < members.length; i++) {
+                        if (members[i].user_id.userId == userId)
+                            admin = members[i].admin;
+                        let userParent = $("#members-user").parent();
+                        let user = $("#members-user").clone();
+                        $(user).find(".user-name").text(members[i].user_id.firstName + " " + members[i].user_id.lastName);
+                        $(user).find(".user-id").text(members[i].user_id.userId);
+                        $(user).find(".user-img .img").text(members[i].user_id.firstName[0] + members[i].user_id.lastName[0]);
+                        if (members[i].admin) {
+                            $(user).find(".user-admin").show();
+                            $(user).find(".group-dropdown-make-admin").hide();
+                            $(user).find(".group-dropdown-remove-admin").show();
+                        } else {
+                            $(user).find(".group-dropdown-make-admin").show();
+                            $(user).find(".group-dropdown-remove-admin").hide();
+                        }
+                        $(user).prop("hidden", false).prop("id", "");
+                        $(userParent).append($(user));
+                    }
+                    if (admin) {
+                        $(`.members-user .group-dropdown-menu-link`).prop('hidden', false);
+                        $(`.members-user .user-id:contains(${userId})`).parents('.members-user')
+                            .find('.group-dropdown-menu-link').prop('hidden', true);
+                    }
+                }
+            }
+        });
+
+        if ($(".page-wrapper").hasClass("toggled3")) {
+            $("#close-members-sidebar").trigger('click');
         } else {
-            $(".page-wrapper").addClass("toggled");
+            $(".page-wrapper").addClass("toggled3");
         }
     });
     //-------------------------------------------------
-    $("#chatBox, #senders-list").click(function() {
-        $("#close-sidebar").trigger('click');
+    $('body').on('click', '.message-info', function(e) {
+        let chatId = $(this).parents('.message-sent-block').find('.message-sent-id').val();
+
+        $(".seen-user:not(#seen-user)").remove();
+        $(".delivered-user:not(#delivered-user)").remove();
+        $.get(`${baseUrl}/chat/group/${chatId}/seenby`, { authToken: authToken }, function(response, status, xhr) {
+            if (response.status == 200) {
+                let seenUsers = response.data;
+
+                if (seenUsers) {
+                    $("#seen-user").prop("hidden", true);
+                    for (let i = 0; i < seenUsers.length; i++) {
+                        let userParent = $("#seen-user").parent();
+                        let user = $("#seen-user").clone();
+                        $(user).find(".user-name").text(seenUsers[i].receiverName);
+                        $(user).find(".user-id").text(seenUsers[i].receiverId);
+                        let name = seenUsers[i].receiverName.split(' ');
+                        let firstName = name[0];
+                        let lastName = name[1];
+                        $(user).find(".user-img .img").text(firstName[0] + lastName[0]);
+                        $(user).prop("hidden", false).prop("id", "");
+                        $(userParent).append($(user));
+                    }
+                } else {
+                    $("#seen-user").prop("hidden", false);
+                }
+            }
+        });
+        $.get(`${baseUrl}/chat/group/${chatId}/deliveredto`, { authToken: authToken }, function(response, status, xhr) {
+            if (response.status == 200) {
+                let deliveredUsers = response.data;
+
+                if (deliveredUsers) {
+                    $("#delivered-user").prop("hidden", true);
+                    for (let i = 0; i < deliveredUsers.length; i++) {
+                        let userParent = $("#delivered-user").parent();
+                        let user = $("#delivered-user").clone();
+                        $(user).find(".user-name").text(deliveredUsers[i].receiverName);
+                        $(user).find(".user-id").text(deliveredUsers[i].receiverId);
+                        let name = deliveredUsers[i].receiverName.split(' ');
+                        let firstName = name[0];
+                        let lastName = name[1];
+                        $(user).find(".user-img .img").text(firstName[0] + lastName[0]);
+                        $(user).prop("hidden", false).prop("id", "");
+                        $(userParent).append($(user));
+                    }
+                } else {
+                    $("#delivered-user").prop("hidden", false);
+                }
+            }
+        });
+        if ($(".page-wrapper").hasClass("toggled2")) {
+            $("#close-chat-sidebar").trigger('click');
+        } else {
+            $(".page-wrapper").addClass("toggled2");
+        }
+    });
+    //-------------------------------------------------
+    $("#close-chat-sidebar").click(function() {
+        $(".page-wrapper").removeClass("toggled2");
     });
     //-------------------------------------------------
     $('body').on('click', '.user', function(e) {
@@ -24,6 +118,19 @@ $(document).ready(function() {
             $(this).removeClass("selected");
         else
             $(this).addClass("selected");
+    });
+    //-------------------------------------------------
+    $("#close-sidebar").click(function() {
+        $(".page-wrapper").removeClass("toggled1");
+    });
+    //-------------------------------------------------
+    $("#show-sidebar").click(function() {
+
+        if ($(".page-wrapper").hasClass("toggled1")) {
+            $("#close-sidebar").trigger('click');
+        } else {
+            $(".page-wrapper").addClass("toggled1");
+        }
     });
     //-------------------------------------------------
     $("#user-search").on('keyup change', function() {
@@ -91,8 +198,7 @@ $(document).ready(function() {
 
         //Add message to chatbox
         if ($(group).hasClass("active")) { //Check if the user has openned the chat of the person who's message came
-            $("#no-message").hide()
-            $('#unread-messages').hide();
+            $("#no-message").hide();
 
             let parent = $("#message-recieved-block").parent();
             let message = $("#message-recieved-block").clone();
@@ -130,15 +236,16 @@ $(document).ready(function() {
 
     });
     //-------------------------------------------------
-    socket.on("typing-group", (id, name) => {
+    socket.on("typing-group", (data) => {
+
         setTimeout(function() {
-            let group = $(`.group .group-id:contains(${id})`).parent();
+            let group = $(`.group .group-id:contains(${data.groupId})`).parent();
             $(group).find(".group-message-typing").hide();
             $(group).find(".group-message").show();
-        }, 500);
-        let group = $(`.group .group-id:contains(${id})`).parent();
+        }, 1000);
+        let group = $(`.group .group-id:contains(${data.groupId})`).parent();
         $(group).find(".group-message").hide();
-        $(group).find(".group-message-typing").text(`${name} is typing...`).show();
+        $(group).find(".group-message-typing").text(`${data.senderName} is typing...`).show();
 
     });
     //-------------------------------------------------

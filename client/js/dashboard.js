@@ -469,11 +469,11 @@ $(document).ready(function() {
         let apiType;
         let data = {
             senderId: userId,
-            senderName: name,
+            senderName: userName,
             authToken: authToken
         };
 
-        if ($("#chatBox").hasClass(".group-message")) {
+        if ($("#chatBox").hasClass("group-message")) {
             apiType = 'group';
 
             data['groupId'] = $(".group.active").find(".group-id").text();
@@ -777,14 +777,16 @@ $(document).ready(function() {
                             noMessages = false;
                             resolve();
                         } else {
-                            let parentDate = $("#date").parent();
-                            let newDate = $("#date").clone();
-                            $(newDate).prop("hidden", false).prop("id", "");
-                            if (date == formatDate(new Date()))
-                                $(newDate).text("Today");
-                            else
-                                $(newDate).text(date);
-                            $(parentDate).prepend($(newDate));
+                            if (noMessages == false) {
+                                let parentDate = $("#date").parent();
+                                let newDate = $("#date").clone();
+                                $(newDate).prop("hidden", false).prop("id", "");
+                                if (date == formatDate(new Date()))
+                                    $(newDate).text("Today");
+                                else
+                                    $(newDate).text(date);
+                                $(parentDate).prepend($(newDate));
+                            }
 
                             reject("No Seen Chat for " + name);
                         }
@@ -938,13 +940,21 @@ $(document).ready(function() {
 //=======================================================================================================
 function setUnseenChatsInChatBox(unseenMessages, id, apiType) {
 
-    let parent = $("#unread-messages").parent();
-    let element = $("#unread-messages");
-    let unreadMessages = $("#unread-messages").clone();
-    $(unreadMessages).find("#unread-messages-count").text(unseenMessages.length);
-    $(unreadMessages).show();
-    $(parent).prepend($(unreadMessages));
-    $(element).remove();
+    let user;
+    if (apiType == 'group') {
+        user = $(`.group .group-id:contains(${id.groupId})`).parents('.group');
+    } else {
+        user = $(`.sender .sender-id:contains(${id})`).parents('.sender');
+    }
+    if (!$(user).hasClass('active')) {
+        let parent = $("#unread-messages").parent();
+        let element = $("#unread-messages");
+        let unreadMessages = $("#unread-messages").clone();
+        $(unreadMessages).find("#unread-messages-count").text(unseenMessages.length);
+        $(unreadMessages).show();
+        $(parent).prepend($(unreadMessages));
+        $(element).remove();
+    }
 
     let query = {
         chatIds: unseenMessages,
@@ -954,7 +964,7 @@ function setUnseenChatsInChatBox(unseenMessages, id, apiType) {
 
     if (apiType == 'group') {
         query['groupId'] = id.groupId;
-        query['senderId'] = id.senderId;
+        query['senderIds'] = id.senderIds;
     } else {
         query['senderId'] = id;
     }
@@ -965,7 +975,7 @@ function setUnseenChatsInChatBox(unseenMessages, id, apiType) {
         $("#unread-messages").fadeOut();
         $("#unread-messages-count").text(0);
         if (apiType == 'group') {
-            let parent = $(`.group .group-id:contains(${id})`).parent();
+            let parent = $(`.group .group-id:contains(${id.groupId})`).parent();
             $(parent).find(".group-unread-messages-count").text(0).hide();
         } else {
             let parent = $(`.sender .sender-id:contains(${id})`).parent();
@@ -1017,7 +1027,7 @@ function setUndeliveredMessagesInChatBox(undeliveredMessages, id, apiType) {
 
     socket.emit(`delivered-${apiType}`, query);
     setTimeout(function() {
-        //markChatAsDelivered(undeliveredMessages, apiType);
+        markChatAsDelivered(undeliveredMessages, apiType);
     }, 1000);
 
 }

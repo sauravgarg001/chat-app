@@ -39,5 +39,8 @@ router.route('/group/unseen').get(auth.isAuthorized, groupController.getGroupUnS
 
 router.route('/group/lastchat').get(auth.isAuthorized, groupController.getGroupLastChats);
 
+router.route('/group/:chatId/seenby').get(auth.isAuthorized, groupController.getChatSeenBy);
+
+router.route('/group/:chatId/deliveredto').get(auth.isAuthorized, groupController.getChatDeliveredTo);
 
 module.exports = router;
