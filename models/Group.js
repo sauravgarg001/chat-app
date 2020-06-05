@@ -11,6 +11,10 @@ let membersSubSchema = new mongoose.Schema({
     admin: {
         type: Boolean,
         default: false
+    },
+    joinedOn: {
+        type: Date,
+        default: Date.now
     }
 }, { _id: false });
 

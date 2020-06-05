@@ -34,7 +34,8 @@
 .sender,
 .group,
 .date,
-.message-name {
+.message-name,
+.user-time {
     -webkit-touch-callout: none;
     /* iOS Safari */
     -webkit-user-select: none;
@@ -257,8 +258,18 @@
 
 /* Group Chat Box*/
 
-#chatBox:not(.group-message) .message-name {
+#chatBox:not(.group-message) .message-name,
+#chatBox:not(.group-message) .delivered-count,
+#chatBox:not(.group-message) .seen-count {
     display: none;
+}
+
+#chatBox.group-message .status-sent {
+    display: none;
+}
+
+#chatBox.group-message .message-time-block {
+    right: 0.35rem !important;
 }
 
 #chatBox .message-info {
@@ -271,7 +282,9 @@
     cursor: pointer;
 }
 
-#chatBox.group-message .message-name {
+#chatBox.group-message .message-name,
+#chatBox.group-message .delivered-count,
+#chatBox.group-message .seen-count {
     display: unset;
 }
 

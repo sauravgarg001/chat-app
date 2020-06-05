@@ -64,7 +64,7 @@ let chatController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatController: findChats()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             })
         }
@@ -125,7 +125,7 @@ let chatController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatController: markUserChatSeen(): modifyChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -185,7 +185,7 @@ let chatController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatController: markUserChatDelivered(): modifyChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -228,7 +228,7 @@ let chatController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatController: markAllUserChatDelivered(): findUndeliveredChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -253,13 +253,13 @@ let chatController = {
                             logger.info('No Undelivered Chat Found', 'chatController: markAllUserChatDelivered(): modifyChat()');
                             reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
                         } else {
-                            logger.info('Undelivered Chat Updated', 'chatController: markAllUserChatDelivered(): modifyChat()');
+                            logger.info('Undelivered Single Chat Updated', 'chatController: markAllUserChatDelivered(): modifyChat()');
                             resolve(chats)
                         }
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatController: markAllUserChatDelivered(): modifyChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -269,7 +269,7 @@ let chatController = {
         findUndeliveredChat()
             .then(modifyChat)
             .then((result) => {
-                res.send(response.generate(false, 'All Chat marked as delivered', 200, result));
+                res.send(response.generate(false, 'All Single Chat marked as delivered', 200, result));
             })
             .catch((error) => {
                 res.send(error);
@@ -311,7 +311,7 @@ let chatController = {
             })
             .catch((err) => {
                 logger.error(err.message, 'chatController: countUserUnSeenChat()', 10);
-                res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                res.send(response.generate(true, `Failed to perform action`, 500, null));
             });
 
     },
@@ -356,7 +356,7 @@ let chatController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatControllerr: getUserUnSeenChat(): findChats()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -426,7 +426,7 @@ let chatController = {
             })
             .catch((err) => {
                 logger.error(err.message, 'chatControllerr: getUserLastChats()', 10);
-                res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                res.send(response.generate(true, `Failed to perform action`, 500, null));
             });
     }
 

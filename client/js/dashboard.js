@@ -199,7 +199,7 @@ $(document).ready(function() {
                                             authToken: authToken,
                                             receiverId: userId
                                         };
-                                        socket.emit("delivered", query);
+                                        socket.emit("delivered-single", query);
                                         senderId = undeliveredChats[i].senderId;
                                         chatIds = Array();
                                     }
@@ -239,7 +239,7 @@ $(document).ready(function() {
                                 let groupId = undeliveredChats[0].groupId;
                                 let chatIds = Array();
                                 let senderIds = Array();
-
+                                let date = Date.now();
                                 for (let i = 0; i < undeliveredChats.length; i++) {
 
                                     chatIds.push(undeliveredChats[i].chatId);
@@ -250,7 +250,10 @@ $(document).ready(function() {
                                             chatIds: chatIds,
                                             groupId: groupId,
                                             authToken: authToken,
-                                            senderIds: senderIds
+                                            senderIds: senderIds,
+                                            receiverId: userId,
+                                            receiverName: userName,
+                                            createdOn: date
                                         };
                                         socket.emit("delivered-group", query);
                                         groupId = undeliveredChats[i].groupId;
@@ -738,12 +741,18 @@ $(document).ready(function() {
                                     $(message).find(".message-sent-id").val(seenChats[i].chatId);
                                     $(message).find(".message-name").text(seenChats[i].senderName);
                                     $(message).find(".time").text(changeTo12Hour(seenChats[i].createdOn));
-                                    if (seenChats[i].seen)
-                                        $(message).find(".status-seen").slideDown();
-                                    else if (seenChats[i].delivered)
-                                        $(message).find(".status-delivered").slideDown();
-                                    else
-                                        $(message).find(".status-sent").slideDown();
+
+                                    if (apiType == 'group') {
+                                        $(message).find(".delivered-count-text").text(parseInt(seenChats[i].deliveredCount));
+                                        $(message).find(".seen-count-text").text(parseInt(seenChats[i].seenCount));
+                                    } else {
+                                        if (seenChats[i].seen)
+                                            $(message).find(".status-seen").slideDown();
+                                        else if (seenChats[i].delivered)
+                                            $(message).find(".status-delivered").slideDown();
+                                        else
+                                            $(message).find(".status-sent").slideDown();
+                                    }
                                     $(message).prop("hidden", false).prop("id", "");
                                     $(parent).prepend($(message));
 
@@ -959,7 +968,9 @@ function setUnseenChatsInChatBox(unseenMessages, id, apiType) {
     let query = {
         chatIds: unseenMessages,
         authToken: authToken,
-        receiverId: userId
+        receiverId: userId,
+        receiverName: userName,
+        modifiedOn: Date.now()
     };
 
     if (apiType == 'group') {
@@ -1015,7 +1026,9 @@ function setUndeliveredMessagesInChatBox(undeliveredMessages, id, apiType) {
     let query = {
         chatIds: undeliveredMessages,
         authToken: authToken,
-        receiverId: userId
+        receiverId: userId,
+        receiverName: userName,
+        createdOn: Date.now()
     };
 
     if (apiType == 'group') {

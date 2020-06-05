@@ -108,6 +108,7 @@
             <!-- Chat SideBar -->
             <nav id="chat-sidebar" class="sidebar-chat-wrapper">
                 <div class="sidebar-content">
+                    <input type="text" id="user-chat-id" hidden>
                     <div id="close-chat-sidebar" class="float-right mr-2" style="font-size: 1.5rem;">
                         <i class="fas fa-times"></i>
                     </div>
@@ -126,6 +127,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">
                                             <span class="user-name text-white">None</span>
+                                            <small class="float-right text-secondary user-time">&nbsp;</small>
                                         </h5>
                                     </div>
                                 </div>
@@ -147,6 +149,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">
                                             <span class="user-name text-white">None</span>
+                                            <small class="float-right text-secondary user-time">&nbsp;</small>
                                         </h5>
                                     </div>
                                 </div>
@@ -211,7 +214,7 @@
                                                 </span>
                                                 <!-- Last Seen -->
                                                 <span class="sender-last-seen">
-                                                    <i class="fas fa-check-double"></i>
+                                                    <i class="far fa-eye"></i>
                                                     <span class="sender-last-seen-text">&nbsp;</span>
                                                 </span>
                                             </small>
@@ -304,7 +307,17 @@
                                     <input type="text" class="message-sent-id" hidden/>
                                     <div class="message-sent">Test Sent</div>
                                     <a class="float-right text-info message-info" title="Message info"><i class="fas fa-info-circle">&nbsp;</i></a>
-                                    <div class="text-muted time position-absolute" style="bottom: -0.65rem; right: 1.25rem;font-size: 0.65rem;">&nbsp;</div>
+                                    <div class="position-absolute text-muted message-time-block" style="bottom: -0.65rem; right: 1.25rem;font-size: 0.65rem;">
+                                        <span class="time">&nbsp;</span>
+                                        <!-- for group chat -->
+                                        <span class="delivered-count">
+                                            <i class="fas fa-truck"></i><span class="delivered-count-text">0</span>
+                                        </span>
+                                        <span class="seen-count">
+                                            <i class="fas fa-eye"></i><span class="seen-count-text">0</span>
+                                        </span>
+                                        <!---->
+                                    </div>
                                     <div class="text-muted status-sent position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check"></i></div>
                                     <div class="text-muted status-delivered position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>
                                     <div class="status-seen position-absolute" style="color:var(--cyan);bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>

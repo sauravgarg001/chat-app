@@ -1,2 +1,3 @@
 Sidebar:https://bootsnipp.com/snippets/Q0dAX
 Update in subdocuments:https://stackoverflow.com/questions/18173482/mongodb-update-deeply-nested-subdocument
+Count subdocument array with conditional field: https://stackoverflow.com/questions/46339175/mongodb-aggregation-conditional-adding-field-based-on-value-in-array

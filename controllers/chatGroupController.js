@@ -61,7 +61,6 @@ let chatGroupController = {
                             $limit: 10
                         },
                         {
-
                             $project: {
                                 _id: 0,
                                 chatId: '$chatId',
@@ -76,12 +75,33 @@ let chatGroupController = {
                                             $eq: ['$senderId', req.user.userId]
                                         },
                                         then: '$receiver',
-                                        else: null
+                                        else: []
+                                    }
+                                },
+                                deliveredCount: { $size: "$receiver" }
+                            }
+                        }, {
+                            $addFields: {
+                                seenReceiver: {
+                                    "$filter": {
+                                        "input": "$receiver",
+                                        "as": "receiver",
+                                        "cond": {
+                                            $eq: ["$$receiver.seen", true]
+                                        }
                                     }
                                 }
-                            },
-
-                        }
+                            }
+                        }, {
+                            $addFields: {
+                                deliveredCount: {
+                                    $size: "$receiver"
+                                },
+                                seenCount: {
+                                    $size: "$seenReceiver"
+                                }
+                            }
+                        }, { $unset: "seenReceiver" }
                     ])
                     .then((chats) => {
                         if (check.isEmpty(chats)) {
@@ -94,7 +114,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: findChats()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             })
         }
@@ -186,7 +206,7 @@ let chatGroupController = {
                                     })
                                     .catch((err) => {
                                         logger.error(err.message, 'chatGroupController: markGroupChatSeen(): modifyChat()', 10);
-                                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                                        reject(response.generate(true, `Failed to perform action`, 500, null));
                                     });
                             } else {
                                 logger.info('Chat Updated', 'chatGroupController: markGroupChatSeen(): modifyChat()');
@@ -196,7 +216,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: markGroupChatSeen(): modifyChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -240,14 +260,14 @@ let chatGroupController = {
                         receiver: {
                             receiverId: req.user.userId,
                             receiverName: req.user.userName,
-                            delivered: true
+                            delivered: true,
+                            seen: false
                         }
                     }
                 }
 
                 ChatModel.update(findQuery, updateQuery, {
-                        multi: true, //to update many
-                        upsert: true
+                        multi: true //to update many
                     })
                     .exec()
                     .then((result) => {
@@ -261,7 +281,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: markGroupChatDelivered(): modifyChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -308,7 +328,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -327,28 +347,21 @@ let chatGroupController = {
                 console.log(findQuery);
 
                 ChatModel.find(findQuery)
-                    .select('-_id chatId')
+                    .select('-_id chatId groupId senderId')
                     .sort('groupId senderId')
                     .exec()
                     .then((chats) => {
                         if (check.isEmpty(chats)) {
                             logger.info('No Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()');
-                            reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
+                            reject(response.generate(true, 'No Undelivered Group Chat Found', 200, null));
                         } else {
                             logger.info('Undelivered Chat Found', 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()');
-
-                            let chatsArray = Array();
-                            for (let i = 0; i < chats.length; i++) {
-                                chatsArray.push(chats[i].chatId);
-                            }
-
-                            resolve(chatsArray)
-
+                            resolve(chats)
                         }
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findUndeliveredChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -356,7 +369,12 @@ let chatGroupController = {
         let modifyChat = (chats) => {
             return new Promise((resolve, reject) => {
 
-                let findQuery = { chatId: { $in: chats } };
+                let chatsArray = Array();
+                for (let i = 0; i < chats.length; i++) {
+                    chatsArray.push(chats[i].chatId);
+                }
+
+                let findQuery = { chatId: { $in: chatsArray } };
 
                 let updateQuery = {
                     $addToSet: {
@@ -383,7 +401,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): modifyChat()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -394,7 +412,7 @@ let chatGroupController = {
             .then(findUndeliveredChat)
             .then(modifyChat)
             .then((result) => {
-                res.send(response.generate(false, 'All Chat marked as delivered', 200, result));
+                res.send(response.generate(false, 'All Group Chat marked as delivered', 200, result));
             })
             .catch((error) => {
                 res.send(error);
@@ -440,7 +458,7 @@ let chatGroupController = {
             })
             .catch((err) => {
                 logger.error(err.message, 'chatGroupController: countGroupUnSeenChat()', 10);
-                res.send(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                res.send(response.generate(true, `Failed to perform action`, 500, null));
             });
 
     },
@@ -492,7 +510,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupControllerr: getGroupUnSeenChat(): findChats()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -536,7 +554,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -587,7 +605,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupControllerr: findLastChat(): getGroupLastChats()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             })
         }
@@ -634,7 +652,7 @@ let chatGroupController = {
                 };
 
                 ChatModel.findOne(findQuery, { _id: 0, receiver: 1 })
-                    .sort('-receiver.createdOn')
+                    .sort('-receiver.modifiedOn')
                     .exec()
                     .then((chat) => {
                         if (check.isEmpty(chat)) {
@@ -647,7 +665,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupControllerr: getChatSeenBy(): findReceiver()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }
@@ -687,8 +705,7 @@ let chatGroupController = {
                     senderId: req.user.userId,
                     receiver: {
                         $elemMatch: {
-                            delivered: true,
-                            seen: false
+                            delivered: true
                         }
                     }
                 };
@@ -710,7 +727,7 @@ let chatGroupController = {
                     })
                     .catch((err) => {
                         logger.error(err.message, 'chatGroupControllerr: getChatDeliveredTo(): findReceiver()', 10);
-                        reject(response.generate(true, `error occurred: ${err.message}`, 500, null));
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
                     });
             });
         }

@@ -52,6 +52,7 @@ $(document).ready(function() {
     //-------------------------------------------------
     $('body').on('click', '.message-info', function(e) {
         let chatId = $(this).parents('.message-sent-block').find('.message-sent-id').val();
+        $('#user-chat-id').val(chatId);
 
         $(".seen-user:not(#seen-user)").remove();
         $(".delivered-user:not(#delivered-user)").remove();
@@ -66,6 +67,10 @@ $(document).ready(function() {
                         let user = $("#seen-user").clone();
                         $(user).find(".user-name").text(seenUsers[i].receiverName);
                         $(user).find(".user-id").text(seenUsers[i].receiverId);
+                        if (formatDate(seenUsers[i].modifiedOn) == formatDate(new Date()))
+                            $(user).find(".user-time").text(changeTo12Hour(seenUsers[i].modifiedOn));
+                        else
+                            $(user).find(".user-time").text(formatDate(seenUsers[i].modifiedOn) + " " + changeTo12Hour(seenUsers[i].modifiedOn));
                         let name = seenUsers[i].receiverName.split(' ');
                         let firstName = name[0];
                         let lastName = name[1];
@@ -89,6 +94,10 @@ $(document).ready(function() {
                         let user = $("#delivered-user").clone();
                         $(user).find(".user-name").text(deliveredUsers[i].receiverName);
                         $(user).find(".user-id").text(deliveredUsers[i].receiverId);
+                        if (formatDate(deliveredUsers[i].createdOn) == formatDate(new Date()))
+                            $(user).find(".user-time").text(changeTo12Hour(deliveredUsers[i].createdOn));
+                        else
+                            $(user).find(".user-time").text(formatDate(deliveredUsers[i].createdOn) + " " + changeTo12Hour(deliveredUsers[i].createdOn));
                         let name = deliveredUsers[i].receiverName.split(' ');
                         let firstName = name[0];
                         let lastName = name[1];
@@ -258,13 +267,30 @@ $(document).ready(function() {
                 $(".message-sent-id").each(function() {
                     if ($(this).val() == chatId) {
                         let parent = $(this).parent();
-
-                        $(parent).find(".status-sent").hide();
-                        $(parent).find(".status-delivered").hide();
-                        $(parent).find(".status-seen").slideDown();
+                        let count = $(parent).find(".seen-count-text").text();
+                        $(parent).find(".seen-count-text").text(parseInt(count) + 1);
                         return false;
                     }
                 });
+
+                //Add user to seen by in sidebar
+                if ($(".page-wrapper").hasClass("toggled2") && $('#user-chat-id').val() == chatId) {
+                    $("#seen-user").prop("hidden", true);
+                    let userParent = $("#seen-user").parent();
+                    let user = $("#seen-user").clone();
+                    $(user).find(".user-name").text(data.receiverName);
+                    $(user).find(".user-id").text(data.receiverId);
+                    if (formatDate(data.modifiedOn) == formatDate(new Date()))
+                        $(user).find(".user-time").text(changeTo12Hour(data.modifiedOn));
+                    else
+                        $(user).find(".user-time").text(formatDate(data.modifiedOn) + " " + changeTo12Hour(data.modifiedOn));
+                    let name = data.receiverName.split(' ');
+                    let firstName = name[0];
+                    let lastName = name[1];
+                    $(user).find(".user-img .img").text(firstName[0] + lastName[0]);
+                    $(user).prop("hidden", false).prop("id", "");
+                    $(userParent).append($(user));
+                }
             }
         }
 
@@ -279,13 +305,30 @@ $(document).ready(function() {
                 $(".message-sent-id").each(function() {
                     if ($(this).val() == chatId) {
                         let parent = $(this).parent();
-
-                        $(parent).find(".status-sent").hide();
-                        $(parent).find(".status-delivered").slideDown();
-                        $(parent).find(".status-seen").hide();
+                        let count = $(parent).find(".delivered-count-text").text();
+                        $(parent).find(".delivered-count-text").text(parseInt(count) + 1);
                         return false;
                     }
                 });
+
+                //Add user to delivered to in sidebar
+                if ($(".page-wrapper").hasClass("toggled2") && $('#user-chat-id').val() == chatId) {
+                    $("#delivered-user").prop("hidden", true);
+                    let userParent = $("#delivered-user").parent();
+                    let user = $("#delivered-user").clone();
+                    $(user).find(".user-name").text(data.receiverName);
+                    $(user).find(".user-id").text(data.receiverId);
+                    if (formatDate(data.createdOn) == formatDate(new Date()))
+                        $(user).find(".user-time").text(changeTo12Hour(data.createdOn));
+                    else
+                        $(user).find(".user-time").text(formatDate(data.createdOn) + " " + changeTo12Hour(data.createdOn));
+                    let name = data.receiverName.split(' ');
+                    let firstName = name[0];
+                    let lastName = name[1];
+                    $(user).find(".user-img .img").text(firstName[0] + lastName[0]);
+                    $(user).prop("hidden", false).prop("id", "");
+                    $(userParent).append($(user));
+                }
             }
         }
 

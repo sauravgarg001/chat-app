@@ -259,7 +259,7 @@ let setServer = (server) => {
                                 if (senderId != data.senderIds[i] ||
                                     i == data.senderIds.length - 1) {
                                     socket.to(data.groupId)
-                                        .broadcast.emit("delivered-group@" + result[senderId], { chatIds: chatIds, receiverId: data.receiverId });
+                                        .broadcast.emit("delivered-group@" + result[senderId], { groupId: data.groupId, chatIds: chatIds, receiverId: data.receiverId, receiverName: data.receiverName, createdOn: data.createdOn });
                                     senderId = data.senderIds[i];
                                     chatIds = Array();
                                 }
@@ -324,7 +324,7 @@ let setServer = (server) => {
                                 if (senderId != data.senderIds[i] ||
                                     i == data.senderIds.length - 1) {
                                     socket.to(data.groupId)
-                                        .broadcast.emit("seen-group@" + result[senderId], { chatIds: chatIds, receiverId: data.receiverId });
+                                        .broadcast.emit("seen-group@" + result[senderId], { groupId: data.groupId, chatIds: chatIds, receiverId: data.receiverId, receiverName: data.receiverName, modifiedOn: data.modifiedOn });
                                     senderId = data.senderIds[i];
                                     chatIds = Array();
                                 }
