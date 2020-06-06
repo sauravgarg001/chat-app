@@ -16,6 +16,7 @@
     <!-- .container start"s -->
     <div class="container">
         <div class="page-wrapper chiller-theme">
+            <!-- create group sidebar -->
             <nav id="sidebar" class="sidebar-wrapper">
                 <div class="sidebar-content">
                     <div id="close-sidebar" class="float-right mr-2" style="font-size: 1.5rem;">
@@ -64,12 +65,59 @@
 
                 </div>
             </nav>
+            <!-- Add members sidebar -->
+            <nav id="add-members-sidebar" class="sidebar-add-members-wrapper">
+                <div class="sidebar-content">
+                    <div id="close-add-members-sidebar" class="float-right mr-2" style="font-size: 1.5rem;">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    <!-- sidebar-header  -->
+                    <div class="sidebar-search">
+                        <div>
+                            <div class="input-group">
+                                <input type="text" class="form-control search-menu" placeholder="Search users" id="add-member-search">
+                                <div class="input-group-append">
+                                    <span class="input-group-text">
+                          <i class="fa fa-search" aria-hidden="true"></i>
+                        </span>
+                                </div>
+                                <button type="button" class="btn m-0 p-0 ml-1 text-info rounded-circle" style="font-size: 1.5rem;" title="Add new members" id="add-members"><i class="fas fa-check-circle"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="add-member-users-list" style="overflow-x: hidden;">
+                        <div class="card add-member-user" id="add-member-user">
+                            <div class="row">
+                                <!-- Sender Template starts -->
+                                <p class="user-id" hidden></p>
+                                <div class="col-md-1 col-3 user-img">
+                                    <div class="img h2 text-dark">&nbsp;</div>
+                                    <!-- <img src="https://meetanentrepreneur.lu/wp-content/uploads/2019/08/profil-linkedin.jpg" class="card-img"> -->
+                                </div>
+                                <div class="col-9 user-text">
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <span class="user-name text-white">Name</span>
+                                            <small class="float-right user-blocked text-danger" style="display: none;"><i class="fas fa-ban"></i></small>
+                                            <small class="float-right user-selected text-info" style="display: none;"><i class="fas fa-check"></i></i></small>
+                                        </h5>
+                                    </div>
+                                </div>
+                                <!-- Sender Template ends -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </nav>
             <!-- Group Info SideBar -->
             <nav id="members-sidebar" class="sidebar-members-wrapper">
                 <div class="sidebar-content">
                     <div id="close-members-sidebar" class="float-right mr-2" style="font-size: 1.5rem;">
                         <i class="fas fa-times"></i>
                     </div>
+                    <input type="text" id="user-group-id" hidden>
+                    <button type="button" class="btn text-white btn-info btn-lg btn-block" title="Add member" id="add-member"><i class="fas fa-user-plus"></i></button>
                     <!-- sidebar-header  -->
                     <div class="h4 text-white font-weight-bold">Group Members:</div>
                     <div id="members-users-list" style="overflow-x: hidden;">
@@ -247,7 +295,6 @@
                                         </span>
                                             <div class="dropdown-menu group-dropdown-menu">
                                                 <a class="dropdown-item group-dropdown-info" href="#">Group info</a>
-                                                <a class="dropdown-item group-dropdown-add" href="#">Add member</a>
                                                 <a class="dropdown-item group-dropdown-exit" href="#">Exit group</a>
                                                 <a class="dropdown-item group-dropdown-spam" href="#">Report spam</a>
                                             </div>
@@ -318,9 +365,11 @@
                                         </span>
                                         <!---->
                                     </div>
+                                    <!-- for single chat -->
                                     <div class="text-muted status-sent position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check"></i></div>
                                     <div class="text-muted status-delivered position-absolute" style="bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>
                                     <div class="status-seen position-absolute" style="color:var(--cyan);bottom: -0.65rem; right:0.35rem;font-size: 0.65rem;display: none;"><i class="fas fa-check-double"></i></div>
+                                    <!---->
                                     <!-- Tail -->
                                     <svg class="bi bi-play-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="var(--cyan)" xmlns="http://www.w3.org/2000/svg" style="position: absolute;top: 0.12rem; right: -.2rem;">
                                     <path d=" M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"></path>
@@ -329,10 +378,10 @@
                                 <!-- Message Sent Template ends -->
                                 <!-- Message Recieved Template starts -->
                                 <div class="col-md-12 message-recieved-block mb-2" id="message-recieved-block" hidden>
-                                    <!-- For group messages> -->
+                                    <!-- for group chat -->
                                     <div class="message-name position-absolute font-weight-bold" style="top: -0.65rem; left: 0;font-size: 0.65rem;padding-left: 5px;">Test Name</div>
                                     <input type="text" class="message-sender-id" hidden/>
-                                    <!-- <For group messages -->
+                                    <!---->
                                     <div class="message-recieved">Test Recieved</div>
                                     <input type="text" class="message-recieved-id" hidden/>
                                     <div class="text-muted time position-absolute" style="bottom: -0.65rem; left: 0;font-size: 0.65rem;padding-left: 5px;">&nbsp;</div>

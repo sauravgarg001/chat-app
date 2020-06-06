@@ -7,6 +7,7 @@ $(document).ready(function() {
     //-------------------------------------------------
     $('body').on('click', '.group-dropdown-info', function(e) {
         let groupId = $(this).parents('.group').find('.group-id').text();
+        $('#user-group-id').val(groupId);
 
         $(".members-user:not(#members-user)").remove();
         $.get(`${baseUrl}/group/`, { authToken: authToken, groupId: groupId }, function(response, status, xhr) {
@@ -35,9 +36,13 @@ $(document).ready(function() {
                         $(userParent).append($(user));
                     }
                     if (admin) {
+                        $('#add-member').show();
                         $(`.members-user .group-dropdown-menu-link`).prop('hidden', false);
                         $(`.members-user .user-id:contains(${userId})`).parents('.members-user')
                             .find('.group-dropdown-menu-link').prop('hidden', true);
+                    } else {
+                        $('#add-member').hide();
+                        $(`.members-user .group-dropdown-menu-link`).prop('hidden', true);
                     }
                 }
             }
@@ -121,7 +126,7 @@ $(document).ready(function() {
         $(".page-wrapper").removeClass("toggled2");
     });
     //-------------------------------------------------
-    $('body').on('click', '.user', function(e) {
+    $('body').on('click', '.user, .add-member-user', function(e) {
         $(this).find(".user-selected").toggle();
         if ($(this).hasClass("selected"))
             $(this).removeClass("selected");
@@ -131,6 +136,8 @@ $(document).ready(function() {
     //-------------------------------------------------
     $("#close-sidebar").click(function() {
         $(".page-wrapper").removeClass("toggled1");
+        $('.user').removeClass("selected");
+        $("#group-name").val("");
     });
     //-------------------------------------------------
     $("#show-sidebar").click(function() {
@@ -195,6 +202,99 @@ $(document).ready(function() {
 
         } else {
             $("#txtToast").html("Enter required Fields!");
+            $('.toast').toast('show');
+        }
+
+    });
+    $("#close-add-members-sidebar").click(function() {
+        $(".page-wrapper").removeClass("toggled4");
+        $(".page-wrapper").addClass("toggled3");
+        $('.add-member-user').removeClass("selected");
+    });
+    //-------------------------------------------------
+    $("#add-member").click(function() {
+        $(".page-wrapper").removeClass("toggled3");
+        $(".page-wrapper").addClass("toggled4");
+
+        $(".add-member-user:not(#add-member-user)").remove();
+        let groupId = $('#user-group-id').val();
+        $.get(`${baseUrl}/group/nonmembers`, { authToken: authToken, groupId: groupId }, function(response, status, xhr) {
+            if (response.status == 200) {
+                let nonmembers = response.data;
+
+                if (nonmembers) {
+                    $("#add-member-user").prop("hidden", true);
+                    for (let i = 0; i < nonmembers.length; i++) {
+                        let userParent = $("#add-member-user").parent();
+                        let user = $("#add-member-user").clone();
+                        $(user).find(".user-name").text(nonmembers[i].firstName + " " + nonmembers[i].lastName);
+                        $(user).find(".user-id").text(nonmembers[i].userId);
+                        if (!nonmembers[i].blocked)
+                            $(user).find('.user-blocked').show();
+                        $(user).find(".user-img .img").text(nonmembers[i].firstName[0] + nonmembers[i].lastName[0]);
+                        $(user).prop("hidden", false).prop("id", "");
+                        $(userParent).append($(user));
+                    }
+                } else {
+                    $("#add-member-user").prop("hidden", false);
+                }
+            }
+        });
+    });
+    //-------------------------------------------------
+    $("#add-member-search").on('keyup change', function() {
+        let text = $(this).val().toLowerCase();
+        $(".add-member-user:not(#add-member-user)").show();
+        $(".add-member-user:not(#add-member-user)").filter(function() {
+            if ($(this).find(".user-name").text().toLowerCase().indexOf(text) == -1 &&
+                $(this).find(".user-selected").css("display") == "none")
+                return true;
+            else
+                return false;
+        }).hide();
+    });
+    //-------------------------------------------------
+    $('#add-members').click(function() {
+        let members = Array();
+        $(".add-member-user.selected").each(function() {
+            members.push({ userId: $(this).find('.user-id').text() });
+        });
+        let groupId = $('#user-group-id').val();
+
+        if (members && members.length != 0) {
+
+            let object = {
+                authToken: authToken,
+                groupId: groupId,
+                members: members
+            };
+
+            let json = JSON.stringify(object);
+
+            $.ajax({
+                type: 'PUT', // Type of request to be send, called as method
+                url: 'http://localhost:3000/group/add', // Url to which the request is send
+                data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+                cache: false, // To unable request pages to be cached
+                contentType: 'application/json', // The content type used when sending data to the server.
+                processData: false, // To send DOMDocument or non processed data file it is set to false
+                success: function(response) { // A function to be called if request succeeds
+                    console.log(response);
+                    $("#txtToast").html(response.message);
+                    $('.toast').toast('show');
+                    if (!response.error) {
+                        $("#close-add-members-sidebar").trigger('click');
+                    }
+                },
+                error: function(response) { // A function to be called if request failed
+                    console.error(response);
+                    $("#txtToast").html(response.responseJSON.message);
+                    $('.toast').toast('show');
+                }
+            });
+
+        } else {
+            $("#txtToast").html("Select atleast one member!");
             $('.toast').toast('show');
         }
 

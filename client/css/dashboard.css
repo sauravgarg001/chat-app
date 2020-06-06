@@ -92,7 +92,8 @@
 .user .user-img .img.h2,
 .seen-user .user-img .img.h2,
 .delivered-user .user-img .img.h2,
-.members-user .user-img .img.h2 {
+.members-user .user-img .img.h2,
+.add-member-user .user-img .img.h2 {
     background-color: white !important;
 }
 
@@ -106,7 +107,8 @@
 .user .user-img,
 .seen-user .user-img,
 .delivered-user .user-img,
-.members-user .user-img {
+.members-user .user-img,
+.add-member-user .user-img {
     padding-left: 1.5rem !important;
     padding-bottom: 0.5rem !important;
     padding-top: 0.5rem !important;
@@ -118,7 +120,8 @@
 .user .user-img .img,
 .seen-user .user-img .img,
 .delivered-user .user-img .img,
-.members-user .user-img .img {
+.members-user .user-img .img,
+.add-member-user .user-img .img {
     padding-top: 10px;
     text-align: center;
     height: 100% !important;

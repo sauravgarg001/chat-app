@@ -14,13 +14,15 @@ router.route('/')
 
 router.route('/all').get(auth.isAuthorized, groupController.getAllGroups);
 
-// router.route('/add').post(auth.isAuthorized, groupController.addUser);
+router.route('/add').put(auth.isAuthorized, groupController.addUsers);
 
 // router.route('/remove').delete(auth.isAuthorized, groupController.removeUser);
 
 // router.route('/admin/make').put(auth.isAuthorized, groupController.markUserAdmin);
 
 router.route('/spam').put(auth.isAuthorized, groupController.spamGroup);
+
+router.route('/nonmembers').get(auth.isAuthorized, groupController.getGroupNonMembers);
 
 
 module.exports = router;

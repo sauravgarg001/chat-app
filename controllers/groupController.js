@@ -233,6 +233,156 @@ let groupController = {
             });
     },
 
+    addUsers: (req, res) => {
+
+        //Local Function Start-->
+
+        let checkUserInput = () => {
+            return new Promise((resolve, reject) => {
+                if (!req.body.groupId || !req.body.members) {
+                    logger.error('Field Missing During Group Creation', 'groupController: validateUserInput()', 5);
+                    reject(response.generate(true, 'One or More Parameter(s) is missing', 400, null));
+                } else if (check.isEmpty(req.body.members)) {
+                    logger.error('Members Field Is Empty During Group Creation', 'groupController: validateUserInput()', 5);
+                    reject(response.generate(true, 'Members field is empty', 400, null));
+                } else {
+                    logger.info('User Input Validated', 'groupController: validateUserInput()', 5);
+                    resolve(req);
+                }
+            });
+        }
+
+        let validateMembers = () => {
+            return new Promise((resolve, reject) => {
+
+                for (let i = 0; i < req.body.members.length; i++) {
+                    let userId = req.body.members[i].userId;
+                    findUserAndGetObjectId(userId)
+                        .then((user_id) => {
+                            delete req.body.members[i].userId;
+                            user_id = mongoose.Types.ObjectId(user_id);
+                            req.body.members[i]["user_id"] = user_id;
+                        }).catch((err) => {
+                            reject(err);
+                        });
+
+                }
+                //for admin
+                let userId = req.user.userId;
+                findUserAndGetObjectId(userId)
+                    .then((user_id) => {
+                        req.user._id = user_id;
+                        let members = req.body.members;
+                        user_id = mongoose.Types.ObjectId(user_id);
+                        members.push({ user_id: user_id, admin: true });
+                        resolve(members);
+                    }).catch((err) => {
+                        reject(err);
+                    });
+            });
+        }
+
+        let addMembers = (members) => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    groupId: req.body.groupId,
+                    members: {
+                        $elemMatch: {
+                            user_id: req.user._id,
+                            admin: true
+                        }
+                    }
+                }
+                let updateQuery = {
+                    $addToSet: {
+                        members: { $each: members }
+                    }
+                };
+
+                GroupModel.update(findQuery, updateQuery)
+                    .then((result) => {
+                        if (result.nModified != 0) {
+                            logger.info('New members added to Group', 'groupController: addMembers()', 10);
+
+                            GroupModel.findOne({ groupId: req.body.groupId })
+                                .then((group) => {
+                                    logger.info('Updated Group Found', 'groupController: addMembers', 10);
+                                    group = group.toObject();
+
+                                    delete group.__v;
+                                    delete group.modifiedOn;
+
+                                    resolve({ group: group, members: members })
+                                })
+                                .catch((err) => {
+                                    logger.error(err.message, 'groupController: addMembers', 10);
+                                    reject(response.generate(true, 'Failed to fetch group', 403, null));
+                                });
+
+                        } else {
+                            logger.error('Unable to add members to group', 'groupController: addMembers()', 10);
+                            resolve(response.generate(true, 'Unable to add members to group', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: addMembers', 10);
+                        reject(response.generate(true, 'Failed to add members to group', 403, null));
+                    });
+
+            });
+        }
+
+        let updateUserDetails = (data) => {
+            return new Promise((resolve, reject) => {
+                let group = data.group;
+                let members = data.members;
+
+                for (let i = 0; i < members.length; i++) {
+
+                    UserModel.update({ _id: members[i].user_id }, {
+                            $addToSet: {
+                                groups: { group_id: group._id }
+                            },
+                            modifiedOn: time.now()
+                        })
+                        .then((result) => {
+                            if (result.nModified != 0) {
+                                logger.info('User Details Updated', 'groupController: updateUserDetails()', 10);
+
+                                if (i == members.length - 1) {
+                                    delete group._id;
+                                    resolve(group);
+                                }
+                            } else {
+                                logger.error('User Details Not Updated', 'groupController: updateUserDetails()', 10);
+                                reject(response.generate(true, 'User details not updated', 403, null));
+                            }
+                        })
+                        .catch((err) => {
+                            logger.error(err.message, 'groupController: updateUserDetails()', 10);
+                            reject(response.generate(true, 'Failed to update user details', 403, null));
+                        });
+                }
+            });
+        }
+
+        //<--Local Functions End
+
+        checkUserInput(req, res)
+            .then(validateMembers)
+            .then(addMembers)
+            .then(updateUserDetails)
+            .then((group) => {
+                res.send(response.generate(false, 'New members added', 200, group));
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
     spamGroup: (req, res) => {
 
         //Local Function Start-->
@@ -390,6 +540,143 @@ let groupController = {
             .then((group) => {
                 res.status(200);
                 res.send(response.generate(false, 'Group fetched', 200, group));
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+    },
+
+    getGroupNonMembers: (req, res) => {
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.query.groupId)) {
+                    logger.error('Missing Field', 'groupController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'groupController: validateField()', 10);
+                    resolve(req.user.userId);
+                }
+            });
+        }
+
+        let getGroupMembers = (user_id) => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    groupId: req.query.groupId,
+                    members: {
+                        $elemMatch: {
+                            user_id: user_id,
+                            admin: true
+                        }
+                    }
+                };
+
+                GroupModel.findOne(findQuery, { _id: 0, __v: 0, modifiedOn: 0 })
+                    .then((group) => {
+                        logger.info('Group Members Fetched', 'groupController: getGroupMembers', 10);
+                        let members_id = Array();
+                        for (let i = 0; i < group.members.length; i++) {
+                            members_id.push(group.members[i].user_id);
+                        }
+                        resolve({ members_id: members_id, user_id: user_id });
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: getGroupMembers', 10);
+                        reject(response.generate(true, 'Failed to get group details', 403, null));
+                    });
+            });
+        }
+
+        let getGroupNonMembers = (data) => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    _id: {
+                        $nin: data.members_id
+                    }
+                };
+
+                UserModel.find(findQuery, { _id: 1, userId: 1, firstName: 1, lastName: 1 })
+                    .then((nonmembers) => {
+                        logger.info('Group Non-Members Found', 'groupController: getGroupMembers', 10);
+                        delete data['members_id'];
+                        data['nonmembers'] = nonmembers;
+                        resolve(data);
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: getGroupNonMembers', 10);
+                        reject(response.generate(true, 'Failed to get group details', 403, null));
+                    });
+            });
+        }
+
+        let getNonMembersWithBlocklist = (data) => {
+            return new Promise((resolve, reject) => {
+
+                let nonmembers = data.nonmembers;
+
+                if (check.isEmpty(nonmembers)) {
+                    resolve(nonmembers);
+                } else {
+
+                    let nonmembers_id = Array();
+                    for (let i = 0; i < nonmembers.length; i++) {
+                        nonmembers_id.push(nonmembers[i]._id);
+                    }
+
+                    let user_id = data.user_id;
+                    let findQuery = {
+                        _id: user_id,
+                        blocked: {
+                            $elemMatch: {
+                                user_id: { $in: nonmembers_id }
+                            }
+                        }
+                    };
+                    UserModel.findOne(findQuery, { _id: 0, blocked: 1 })
+                        .then((user) => {
+                            if (check.isEmpty(user)) {
+                                logger.info('No Blocked Group Non-Members Found', 'groupController: getGroupMembers', 10);
+                                for (let i = 0; i < nonmembers.length; i++) {
+                                    nonmembers[i]['_id'] = null;
+                                    nonmembers[i]['blocked'] = false;
+                                }
+                            } else {
+                                let blockednonmembers = user.blocked;
+                                logger.info('Blocked Group Non-Members Found', 'groupController: getGroupMembers', 10);
+                                for (let i = 0; i < nonmembers_id.length; i++) {
+                                    let blocked = false;
+                                    for (let j = 0; j < blockednonmembers.length; j++) {
+                                        if (blockednonmembers[j].user_id.toString() == nonmembers_id[i].toString()) {
+                                            blocked = true;
+                                            break;
+                                        }
+                                    }
+                                    nonmembers[i]['_id'] = null;
+                                    nonmembers[i]['blocked'] = blocked;
+                                }
+                            }
+                            resolve(nonmembers);
+                        })
+                        .catch((err) => {
+                            logger.error(err.message, 'groupController: getGroupMembers', 10);
+                            reject(response.generate(true, 'Failed to get group details', 403, null));
+                        });
+                }
+            });
+        }
+
+        validateField(req, res)
+            .then(findUserAndGetObjectId)
+            .then(getGroupMembers)
+            .then(getGroupNonMembers)
+            .then(getNonMembersWithBlocklist)
+            .then((nonmembers) => {
+                res.status(200);
+                res.send(response.generate(false, 'Group non-members fetched', 200, nonmembers));
             })
             .catch((err) => {
                 res.status(err.status);

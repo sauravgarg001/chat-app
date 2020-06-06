@@ -9,6 +9,7 @@ const time = require('../libs/timeLib');
 //Models
 const ChatModel = mongoose.model('GroupChat');
 const UserModel = mongoose.model('User');
+const GroupModel = mongoose.model('Group');
 
 
 let chatGroupController = {
@@ -29,13 +30,62 @@ let chatGroupController = {
             });
         }
 
+        let findUserAndGetObjectId = () => {
+            return new Promise((resolve, reject) => {
 
-        let findChats = () => {
+                UserModel.findOne({ userId: req.user.userId })
+                    .select('_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.error('No User Found', 'chatGroupController: findUserAndGetObjectId()', 7);
+                            reject(response.generate(true, 'No User Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'chatGroupController: findUserAndGetObjectId()', 10);
+                            req.user._id = user._id
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: findUserAndGetObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let getGroupJoinedOn = () => {
+            return new Promise((resolve, reject) => {
+                GroupModel.find({
+                        groupId: req.query.groupId,
+                        members: {
+                            $elemMatch: {
+                                "user_id": req.user._id
+                            }
+                        }
+                    }, { _id: 0, "members.$": 1 })
+                    .then((members) => {
+                        if (check.isEmpty(members)) {
+                            logger.error('No User Found', 'chatGroupController: getGroupJoinedOn()', 7);
+                            reject(response.generate(true, 'No User Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'chatGroupController: getGroupJoinedOn()', 10);
+                            resolve(members[0].joinedOn);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: getGroupJoinedOn()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let findChats = (joinedOn) => {
             return new Promise((resolve, reject) => {
 
                 ChatModel.aggregate([{
                             $match: {
                                 groupId: req.query.groupId,
+                                createdOn: { $gte: joinedOn },
                                 $or: [{
                                     receiver: {
                                         $elemMatch: {
@@ -122,6 +172,8 @@ let chatGroupController = {
         //<--Local Functions End
 
         validateParams()
+            .then(findUserAndGetObjectId)
+            .then(getGroupJoinedOn)
             .then(findChats)
             .then((chats) => {
                 res.send(response.generate(false, 'All Chats Listed', 200, chats));
@@ -479,11 +531,61 @@ let chatGroupController = {
             });
         }
 
+        let findUserAndGetObjectId = () => {
+            return new Promise((resolve, reject) => {
+
+                UserModel.findOne({ userId: req.user.userId })
+                    .select('_id')
+                    .exec()
+                    .then((user) => {
+                        if (check.isEmpty(user)) {
+                            logger.error('No User Found', 'chatGroupController: findUserAndGetObjectId()', 7);
+                            reject(response.generate(true, 'No User Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'chatGroupController: findUserAndGetObjectId()', 10);
+                            req.user._id = user._id
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: findUserAndGetObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
+        let getGroupJoinedOn = () => {
+            return new Promise((resolve, reject) => {
+                GroupModel.find({
+                        groupId: req.query.groupId,
+                        members: {
+                            $elemMatch: {
+                                "user_id": req.user._id
+                            }
+                        }
+                    }, { _id: 0, "members.$": 1 })
+                    .then((members) => {
+                        if (check.isEmpty(members)) {
+                            logger.error('No User Found', 'chatGroupController: getGroupJoinedOn()', 7);
+                            reject(response.generate(true, 'No User Found', 404, null));
+                        } else {
+                            logger.info('User Found', 'chatGroupController: getGroupJoinedOn()', 10);
+                            resolve(members[0].joinedOn);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatGroupController: getGroupJoinedOn()', 10);
+                        reject(response.generate(true, 'Failed to find user', 500, null));
+                    });
+            });
+        }
+
         let findChats = () => {
             return new Promise((resolve, reject) => {
 
                 let findQuery = {
                     groupId: req.query.groupId,
+                    createdOn: { $gte: joinedOn },
                     senderId: {
                         $ne: req.user.userId
                     },
@@ -518,6 +620,8 @@ let chatGroupController = {
         //<--Local Functions End
 
         validateParams()
+            .then(findUserAndGetObjectId)
+            .then(getGroupJoinedOn)
             .then(findChats)
             .then((chats) => {
                 res.send(response.generate(false, 'chat found and listed.', 200, chats))
