@@ -642,7 +642,6 @@ $(document).ready(function() {
                         query['senderId'] = id;
                     }
                     $.get(`${baseUrl}/chat/${apiType}/unseen`, query, function(response, status, xhr) {
-
                         if (response.status == 200) {
                             let unseenChats = response.data;
                             if (unseenChats) {

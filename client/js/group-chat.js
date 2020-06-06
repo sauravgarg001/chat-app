@@ -283,7 +283,8 @@ $(document).ready(function() {
                     $("#txtToast").html(response.message);
                     $('.toast').toast('show');
                     if (!response.error) {
-                        $("#close-add-members-sidebar").trigger('click');
+                        $(".page-wrapper").removeClass("toggled4");
+                        $('.add-member-user').removeClass("selected");
                     }
                 },
                 error: function(response) { // A function to be called if request failed

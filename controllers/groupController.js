@@ -272,9 +272,6 @@ let groupController = {
                 findUserAndGetObjectId(userId)
                     .then((user_id) => {
                         req.user._id = user_id;
-                        let members = req.body.members;
-                        user_id = mongoose.Types.ObjectId(user_id);
-                        members.push({ user_id: user_id, admin: true });
                         resolve(members);
                     }).catch((err) => {
                         reject(err);
