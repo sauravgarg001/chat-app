@@ -254,18 +254,17 @@ let groupController = {
 
         let validateMembers = () => {
             return new Promise((resolve, reject) => {
-
+                let members = Array();
+                let joinedOn = time.now();
                 for (let i = 0; i < req.body.members.length; i++) {
                     let userId = req.body.members[i].userId;
                     findUserAndGetObjectId(userId)
                         .then((user_id) => {
-                            delete req.body.members[i].userId;
                             user_id = mongoose.Types.ObjectId(user_id);
-                            req.body.members[i]["user_id"] = user_id;
+                            members.push({ user_id: user_id, joinedOn: joinedOn });
                         }).catch((err) => {
                             reject(err);
                         });
-
                 }
                 //for admin
                 let userId = req.user.userId;
@@ -281,6 +280,7 @@ let groupController = {
 
         let addMembers = (members) => {
             return new Promise((resolve, reject) => {
+                console.log(JSON.stringify(members));
 
                 let findQuery = {
                     groupId: req.body.groupId,
@@ -372,6 +372,196 @@ let groupController = {
             .then(updateUserDetails)
             .then((group) => {
                 res.send(response.generate(false, 'New members added', 200, group));
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
+    makeUserAdmin: (req, res) => {
+
+        //Local Function Start-->
+
+        let checkUserInput = () => {
+            return new Promise((resolve, reject) => {
+                if (!req.body.groupId || !req.body.memberId) {
+                    logger.error('Field Missing During Group Creation', 'groupController: validateUserInput()', 5);
+                    reject(response.generate(true, 'One or More Parameter(s) is missing', 400, null));
+                } else {
+                    logger.info('User Input Validated', 'groupController: validateUserInput()', 5);
+                    resolve(req);
+                }
+            });
+        }
+
+        let validateMembers = () => {
+            return new Promise((resolve, reject) => {
+
+                let userId = req.body.memberId;
+                findUserAndGetObjectId(userId)
+                    .then((user_id) => {
+                        user_id = mongoose.Types.ObjectId(user_id);
+                        req.body["member_id"] = user_id;
+                        //for admin
+                        findUserAndGetObjectId(req.user.userId)
+                            .then((user_id) => {
+                                req.user._id = user_id;
+                                resolve();
+                            }).catch((err) => {
+                                reject(err);
+                            });
+                    }).catch((err) => {
+                        reject(err);
+                    });
+            });
+        }
+
+        let makeAdmin = () => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    groupId: req.body.groupId,
+                    members: {
+                        $elemMatch: {
+                            user_id: req.user._id,
+                            admin: true
+                        }
+                    }
+                }
+                let updateQuery = {
+                    $set: {
+                        "members.$[i].admin": true
+                    }
+                };
+
+                let options = {
+                    arrayFilters: [{
+                        "i.user_id": req.body.member_id
+                    }]
+                }
+
+                GroupModel.update(findQuery, updateQuery, options)
+                    .then((result) => {
+                        if (result.nModified != 0) {
+                            logger.info('User made admin', 'groupController: makeAdmin()', 10);
+                            resolve();
+                        } else {
+                            logger.error('Unable to make user admin', 'groupController: addMembers()', 10);
+                            resolve(response.generate(true, 'Unable to make user admin', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: addMembers', 10);
+                        reject(response.generate(true, 'Failed to make user admin', 403, null));
+                    });
+
+            });
+        }
+
+        //<--Local Functions End
+
+        checkUserInput(req, res)
+            .then(validateMembers)
+            .then(makeAdmin)
+            .then(() => {
+                res.send(response.generate(false, 'User made admin', 200, null));
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
+    removeUserAdmin: (req, res) => {
+
+        //Local Function Start-->
+
+        let checkUserInput = () => {
+            return new Promise((resolve, reject) => {
+                if (!req.body.groupId || !req.body.memberId) {
+                    logger.error('Field Missing During Group Creation', 'groupController: validateUserInput()', 5);
+                    reject(response.generate(true, 'One or More Parameter(s) is missing', 400, null));
+                } else {
+                    logger.info('User Input Validated', 'groupController: validateUserInput()', 5);
+                    resolve(req);
+                }
+            });
+        }
+
+        let validateMembers = () => {
+            return new Promise((resolve, reject) => {
+
+                let userId = req.body.memberId;
+                findUserAndGetObjectId(userId)
+                    .then((user_id) => {
+                        user_id = mongoose.Types.ObjectId(user_id);
+                        req.body["member_id"] = user_id;
+                        //for admin
+                        findUserAndGetObjectId(req.user.userId)
+                            .then((user_id) => {
+                                req.user._id = user_id;
+                                resolve();
+                            }).catch((err) => {
+                                reject(err);
+                            });
+                    }).catch((err) => {
+                        reject(err);
+                    });
+            });
+        }
+
+        let removeAdmin = () => {
+            return new Promise((resolve, reject) => {
+
+                let findQuery = {
+                    groupId: req.body.groupId,
+                    members: {
+                        $elemMatch: {
+                            user_id: req.user._id,
+                            admin: true
+                        }
+                    }
+                }
+                let updateQuery = {
+                    $set: {
+                        "members.$[i].admin": false
+                    }
+                };
+
+                let options = {
+                    arrayFilters: [{
+                        "i.user_id": req.body.member_id
+                    }]
+                }
+
+                GroupModel.update(findQuery, updateQuery, options)
+                    .then((result) => {
+                        if (result.nModified != 0) {
+                            logger.info('User made admin', 'groupController: removeAdmin()', 10);
+                            resolve();
+                        } else {
+                            logger.error('Unable to make user admin', 'groupController: removeAdmin()', 10);
+                            resolve(response.generate(true, 'Unable to remove user as admin', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: removeAdmin()', 10);
+                        reject(response.generate(true, 'Failed to remove user as admin', 403, null));
+                    });
+
+            });
+        }
+
+        //<--Local Functions End
+
+        checkUserInput(req, res)
+            .then(validateMembers)
+            .then(removeAdmin)
+            .then(() => {
+                res.send(response.generate(false, 'User removed as admin', 200, null));
             })
             .catch((err) => {
                 res.status(err.status);

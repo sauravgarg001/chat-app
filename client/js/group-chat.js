@@ -126,7 +126,7 @@ $(document).ready(function() {
         $(".page-wrapper").removeClass("toggled2");
     });
     //-------------------------------------------------
-    $('body').on('click', '.user, .add-member-user', function(e) {
+    $('body').on('click', '.user:not(#user), .add-member-user:not(#add-member-user)', function(e) {
         $(this).find(".user-selected").toggle();
         if ($(this).hasClass("selected"))
             $(this).removeClass("selected");
@@ -222,7 +222,7 @@ $(document).ready(function() {
             if (response.status == 200) {
                 let nonmembers = response.data;
 
-                if (nonmembers) {
+                if (nonmembers && nonmembers.length != 0) {
                     $("#add-member-user").prop("hidden", true);
                     for (let i = 0; i < nonmembers.length; i++) {
                         let userParent = $("#add-member-user").parent();
@@ -299,6 +299,74 @@ $(document).ready(function() {
             $('.toast').toast('show');
         }
 
+    });
+    //-------------------------------------------------
+    $('body').on('click', '.group-dropdown-make-admin', function(e) {
+        let member = $(this).parents('.members-user');
+        let object = {
+            authToken: authToken,
+            groupId: $('#user-group-id').val(),
+            memberId: $(member).find('.user-id').text()
+        };
+
+        let json = JSON.stringify(object);
+
+        $.ajax({
+            type: 'PUT', // Type of request to be send, called as method
+            url: 'http://localhost:3000/group/admin/make', // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
+                if (!response.error) {
+                    $(member).find(".user-admin").show();
+                    $(member).find(".group-dropdown-make-admin").hide();
+                    $(member).find(".group-dropdown-remove-admin").show();
+                }
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+                $("#txtToast").html(response.responseJSON.message);
+                $('.toast').toast('show');
+            }
+        });
+    });
+    //-------------------------------------------------
+    $('body').on('click', '.group-dropdown-remove-admin', function(e) {
+        let member = $(this).parents('.members-user');
+        let object = {
+            authToken: authToken,
+            groupId: $('#user-group-id').val(),
+            memberId: $(member).find('.user-id').text()
+        };
+
+        let json = JSON.stringify(object);
+
+        $.ajax({
+            type: 'PUT', // Type of request to be send, called as method
+            url: 'http://localhost:3000/group/admin/remove', // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
+                if (!response.error) {
+                    $(member).find(".group-dropdown-make-admin").show();
+                    $(member).find(".group-dropdown-remove-admin").hide();
+                    $(member).find(".user-admin").hide();
+                }
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+                $("#txtToast").html(response.responseJSON.message);
+                $('.toast').toast('show');
+            }
+        });
     });
     // Chats Events:-
     //-------------------------------------------------
