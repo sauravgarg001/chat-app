@@ -38,8 +38,9 @@ $(document).ready(function() {
                     if (admin) {
                         $('#add-member').show();
                         $(`.members-user .group-dropdown-menu-link`).prop('hidden', false);
-                        $(`.members-user .user-id:contains(${userId})`).parents('.members-user')
-                            .find('.group-dropdown-menu-link').prop('hidden', true);
+                        let user = $(`.members-user .user-id:contains(${userId})`).parents('.members-user');
+                        $(user).find('.group-dropdown-remove-admin').show();
+                        $(user).find('.group-dropdown-remove').hide();
                     } else {
                         $('#add-member').hide();
                         $(`.members-user .group-dropdown-menu-link`).prop('hidden', true);
@@ -53,6 +54,39 @@ $(document).ready(function() {
         } else {
             $(".page-wrapper").addClass("toggled3");
         }
+    });
+    //-------------------------------------------------
+    $('body').on('click', '.group-dropdown-exit', function(e) {
+        let group = $(this).parents('.group');
+        let groupId = $(group).find('.group-id').text();
+
+        let object = {
+            authToken: authToken,
+            groupId: groupId
+        };
+
+        let json = JSON.stringify(object);
+
+        $.ajax({
+            type: 'DELETE', // Type of request to be send, called as method
+            url: 'http://localhost:3000/group/leave', // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
+                if (!response.error) {
+                    $(group).remove();
+                }
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+                $("#txtToast").html(response.responseJSON.message);
+                $('.toast').toast('show');
+            }
+        });
     });
     //-------------------------------------------------
     $('body').on('click', '.message-info', function(e) {
@@ -359,6 +393,38 @@ $(document).ready(function() {
                     $(member).find(".group-dropdown-make-admin").show();
                     $(member).find(".group-dropdown-remove-admin").hide();
                     $(member).find(".user-admin").hide();
+                }
+            },
+            error: function(response) { // A function to be called if request failed
+                console.error(response);
+                $("#txtToast").html(response.responseJSON.message);
+                $('.toast').toast('show');
+            }
+        });
+    });
+    //-------------------------------------------------
+    $('body').on('click', '.group-dropdown-remove', function(e) {
+        let member = $(this).parents('.members-user');
+        let object = {
+            authToken: authToken,
+            groupId: $('#user-group-id').val(),
+            memberId: $(member).find('.user-id').text()
+        };
+
+        let json = JSON.stringify(object);
+
+        $.ajax({
+            type: 'DELETE', // Type of request to be send, called as method
+            url: 'http://localhost:3000/group/remove', // Url to which the request is send
+            data: json, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+            cache: false, // To unable request pages to be cached
+            contentType: 'application/json', // The content type used when sending data to the server.
+            processData: false, // To send DOMDocument or non processed data file it is set to false
+            success: function(response) { // A function to be called if request succeeds
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
+                if (!response.error) {
+                    $(member).remove();
                 }
             },
             error: function(response) { // A function to be called if request failed

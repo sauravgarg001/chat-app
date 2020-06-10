@@ -364,7 +364,7 @@ let chatGroupController = {
                     .populate('groups.group_id', 'groupId -_id')
                     .exec()
                     .then((user) => {
-                        if (check.isEmpty(user)) {
+                        if (check.isEmpty(user.groups)) {
                             logger.info('No Group Found', 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()');
                             reject(response.generate(true, 'No Group Found', 200, null));
                         } else {
@@ -705,7 +705,7 @@ let chatGroupController = {
                     .populate('groups.group_id', 'groupId -_id')
                     .exec()
                     .then((user) => {
-                        if (check.isEmpty(user)) {
+                        if (check.isEmpty(user.groups)) {
                             logger.info('No Group Found', 'chatGroupController: markAllGroupChatDelivered(): findGroupUserIn()');
                             reject(response.generate(true, 'No Group Found', 200, null));
                         } else {

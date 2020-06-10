@@ -16,6 +16,10 @@ let membersSubSchema = new mongoose.Schema({
     joinedOn: {
         type: Date,
         default: Date.now
+    },
+    modifiedOn: {
+        type: Date,
+        default: Date.now
     }
 }, { _id: false });
 

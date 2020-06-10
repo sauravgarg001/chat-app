@@ -432,7 +432,8 @@ let groupController = {
                 }
                 let updateQuery = {
                     $set: {
-                        "members.$[i].admin": true
+                        "members.$[i].admin": true,
+                        "members.$[i].modifiedOn": time.now()
                     }
                 };
 
@@ -513,6 +514,127 @@ let groupController = {
             });
         }
 
+        let checkAdmin = () => {
+            return new Promise((resolve, reject) => {
+
+                GroupModel.findOne({
+                        groupId: req.body.groupId,
+                        members: {
+                            $elemMatch: {
+                                user_id: req.user._id,
+                                admin: true
+                            }
+                        }
+                    }, { "members.$": 1 })
+                    .then((admin) => {
+                        if (check.isEmpty(admin)) {
+                            logger.error('User Not Admin', 'groupController: checkAdmin()', 10);
+                            reject(response.generate(true, 'Unable to remove user', 403, null));
+                        } else {
+                            logger.info('User Checked Admin', 'groupController: checkAdmin()', 10);
+                            req.user.modifiedOn = admin.members[0].modifiedOn;
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: checkAdmin()', 10);
+                        reject(response.generate(true, 'Failed to remove user', 500, null));
+                    });
+            });
+        }
+
+        let checkLastAdmin = () => {
+            return new Promise((resolve, reject) => {
+
+                if (req.body.memberId == req.user.userId) {
+                    logger.info('User is removing himself as admin', 'groupController: checkLastAdmin()', 10);
+                    GroupModel.findOne({
+                            groupId: req.body.groupId,
+                            members: {
+                                $elemMatch: {
+                                    user_id: req.user._id
+                                }
+                            }
+                        })
+                        .then((group) => {
+
+                            if (group.members.length == 1) {
+                                logger.error("Can't remove last member ", 'groupController: checkLastAdmin()', 10);
+                                reject(response.generate(true, 'Can not be removed as admin as you are last member of group', 403, null));
+
+                            } else {
+
+                                let members = group.members;
+                                let minJoinedOn_user_id = undefined;
+                                let minJoinedOn = undefined;
+                                let isLastAdmin = true;
+                                for (let i = 0; i < members.length; i++) {
+
+                                    if (members[i].user_id.toString() == req.user._id.toString())
+                                        continue;
+
+                                    if (members[i].admin == true) {
+                                        isLastAdmin = false;
+                                        break
+                                    }
+                                    if (minJoinedOn == undefined || new Date(minJoinedOn) > new Date(members[0].joinedOn)) {
+                                        minJoinedOn = members[i].joinedOn;
+                                        minJoinedOn_user_id = members[i].user_id;
+                                    }
+
+                                }
+                                if (isLastAdmin) {
+                                    logger.info('Is Last Admin of Group', 'groupController: checkLastAdmin()', 10);
+
+                                    let findQuery = {
+                                        groupId: req.body.groupId
+                                    }
+
+                                    let updateQuery = {
+                                        $set: {
+                                            "members.$[i].admin": true,
+                                            "members.$[i].modifiedOn": time.now()
+                                        }
+                                    };
+
+                                    let options = {
+                                        arrayFilters: [{
+                                            "i.user_id": minJoinedOn_user_id
+                                        }]
+                                    }
+
+                                    GroupModel.update(findQuery, updateQuery, options)
+                                        .then((result) => {
+                                            if (result.nModified != 0) {
+                                                logger.info('New user made admin', 'groupController: checkLastAdmin()', 10);
+                                                resolve(false);
+                                            } else {
+                                                logger.error('Unable to leave group', 'groupController: checkLastAdmin()', 10);
+                                                reject(response.generate(true, 'Unable to leave group', 403, null));
+                                            }
+                                        })
+                                        .catch((err) => {
+                                            logger.error(err.message, 'groupController: checkLastAdmin', 10);
+                                            reject(response.generate(true, 'Failed to leave group', 403, null));
+                                        });
+
+                                } else {
+                                    logger.info('Not Last Member and last admin of group', 'groupController: checkLastAdmin()', 10);
+                                    resolve();
+                                }
+                            }
+                        })
+                        .catch((err) => {
+                            logger.error(err.message, 'groupController: checkLastAdmin()', 10);
+                            reject(response.generate(true, 'Failed to leave group', 500, null));
+                        });
+                } else {
+                    logger.info('User is not removing himself as admin', 'groupController: checkLastAdmin()', 10);
+                    resolve();
+                }
+            });
+        }
+
         let removeAdmin = () => {
             return new Promise((resolve, reject) => {
 
@@ -520,14 +642,16 @@ let groupController = {
                     groupId: req.body.groupId,
                     members: {
                         $elemMatch: {
-                            user_id: req.user._id,
+                            user_id: req.body.member_id,
+                            modifiedOn: { $gte: req.user.modifiedOn },
                             admin: true
                         }
                     }
                 }
                 let updateQuery = {
                     $set: {
-                        "members.$[i].admin": false
+                        "members.$[i].admin": false,
+                        "members.$[i].modifiedOn": time.now()
                     }
                 };
 
@@ -540,11 +664,11 @@ let groupController = {
                 GroupModel.update(findQuery, updateQuery, options)
                     .then((result) => {
                         if (result.nModified != 0) {
-                            logger.info('User made admin', 'groupController: removeAdmin()', 10);
+                            logger.info('User removed as admin', 'groupController: removeAdmin()', 10);
                             resolve();
                         } else {
-                            logger.error('Unable to make user admin', 'groupController: removeAdmin()', 10);
-                            resolve(response.generate(true, 'Unable to remove user as admin', 403, null));
+                            logger.error('Unable to remove user as admin', 'groupController: removeAdmin()', 10);
+                            reject(response.generate(true, 'Unable to remove user as admin as user became admin before you!', 403, null));
                         }
                     })
                     .catch((err) => {
@@ -559,6 +683,8 @@ let groupController = {
 
         checkUserInput(req, res)
             .then(validateMembers)
+            .then(checkAdmin)
+            .then(checkLastAdmin)
             .then(removeAdmin)
             .then(() => {
                 res.send(response.generate(false, 'User removed as admin', 200, null));
@@ -634,6 +760,31 @@ let groupController = {
             });
         }
 
+        let groupMembersUpdated = (user_id) => {
+            return new Promise((resolve, reject) => {
+                GroupModel.update({
+                        groupId: req.body.groupId,
+                    }, {
+                        $pull: {
+                            members: { user_id: user_id }
+                        }
+                    }, { upsert: true })
+                    .then((result) => {
+                        if (result.n == 1) {
+                            logger.info('Updated Group Members', 'groupController: groupMembersUpdated()', 10);
+                            resolve(user_id);
+                        } else {
+                            logger.error('Unable to Update Group Members', 'groupController: groupMembersUpdated()', 10);
+                            resolve(response.generate(true, 'User unable to leave group', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: groupMembersUpdated()', 10);
+                        reject(response.generate(true, 'Failed to leave group', 500, null));
+                    });
+            });
+        }
+
         let updateGroupInSpam = (user_id) => {
             return new Promise((resolve, reject) => {
 
@@ -669,7 +820,377 @@ let groupController = {
             .then(getSpamGroupObjectId)
             .then(findUserAndGetObjectId)
             .then(leaveGroup)
+            .then(groupMembersUpdated)
             .then(updateGroupInSpam)
+            .then((response) => {
+                res.status(200);
+                res.send(response);
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
+    leaveGroup: (req, res) => {
+
+        //Local Function Start-->
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (check.isEmpty(req.body.groupId)) {
+                    logger.error('Missing Field', 'groupController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'groupController: validateField()', 10);
+                    resolve();
+                }
+            });
+        }
+
+        let getGroupObjectId = () => {
+            return new Promise((resolve, reject) => {
+
+                GroupModel.findOne({ groupId: req.body.groupId })
+                    .select('_id')
+                    .exec()
+                    .then((group) => {
+                        if (check.isEmpty(group)) {
+                            logger.error('No Group Found', 'groupController: getGroupObjectId()', 7);
+                            reject(response.generate(true, 'No Group Details Found', 404, null));
+                        } else {
+                            logger.info('Group Found', 'groupController: getGroupObjectId()', 10);
+                            req.body["group_id"] = group._id;
+                            resolve(req.user.userId);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: getGroupObjectId()', 10);
+                        reject(response.generate(true, 'Failed to find spam group', 500, null));
+                    });
+            });
+        }
+
+        let leaveGroup = (user_id) => {
+            return new Promise((resolve, reject) => {
+                req.user['_id'] = user_id;
+                UserModel.update({
+                        userId: req.user.userId,
+                    }, {
+                        $pull: {
+                            groups: { group_id: req.body.group_id }
+                        }
+                    })
+                    .then((result) => {
+                        if (result.nModified == 1) {
+                            logger.info('User Left Group', 'groupController: leaveGroup()', 10);
+                            resolve();
+                        } else {
+                            logger.error('User Unable to Leave Group', 'groupController: leaveGroup()', 10);
+                            resolve(response.generate(true, 'User unable to leave group', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: leaveGroup()', 10);
+                        reject(response.generate(true, 'Failed to leave group', 500, null));
+                    });
+            });
+        }
+
+        let checkLastMember = () => {
+            return new Promise((resolve, reject) => {
+
+                GroupModel.findOne({
+                        groupId: req.body.groupId,
+                        members: {
+                            $elemMatch: {
+                                user_id: req.user._id
+                            }
+                        }
+                    })
+                    .then((group) => {
+
+                        if (group.members.length == 1) {
+                            logger.info('Last Member of group', 'groupController: checkLastMember()', 10);
+                            GroupModel.deleteOne({ groupId: req.body.groupId })
+                                .then((result) => {
+                                    if (result.deletedCount == 1) {
+                                        logger.info('Group Deleted', 'groupController: checkLastMember()', 10);
+                                        resolve(true);
+                                    } else {
+                                        logger.error(err.message, 'groupController: checkLastMember()', 10);
+                                        reject(response.generate(true, 'Unable to leave group', 500, null));
+                                    }
+                                }).catch((err) => {
+                                    logger.error(err.message, 'groupController: checkLastMember()', 10);
+                                    reject(response.generate(true, 'Failed to leave group', 500, null));
+                                });
+
+                        } else {
+
+                            let members = group.members;
+                            let minJoinedOn_user_id = members[0].user_id;
+                            let minJoinedOn = members[0].joinedOn;
+                            let isLastAdmin = true;
+                            for (let i = 0; i < members.length; i++) {
+                                if (members[i].admin == true) {
+                                    isLastAdmin = false;
+                                    break;
+                                }
+                                if (new Date(minJoinedOn) > new Date(members[0].joinedOn)) {
+                                    minJoinedOn = members[i].joinedOn;
+                                    minJoinedOn_user_id = members[i].user_id;
+                                }
+                            }
+                            if (isLastAdmin) {
+                                logger.info('Is Last Admin of Group', 'groupController: checkLastMember()', 10);
+
+                                let findQuery = {
+                                    groupId: req.body.groupId
+                                }
+
+                                let updateQuery = {
+                                    $set: {
+                                        "members.$[i].admin": true,
+                                        "members.$[i].modifiedOn": time.now()
+                                    }
+                                };
+
+                                let options = {
+                                    arrayFilters: [{
+                                        "i.user_id": minJoinedOn_user_id
+                                    }]
+                                }
+
+                                GroupModel.update(findQuery, updateQuery, options)
+                                    .then((result) => {
+                                        if (result.nModified != 0) {
+                                            logger.info('New user made admin', 'groupController: checkLastMember()', 10);
+                                            resolve(false);
+                                        } else {
+                                            logger.error('Unable to leave group', 'groupController: checkLastMember()', 10);
+                                            resolve(response.generate(true, 'Unable to leave group', 403, null));
+                                        }
+                                    })
+                                    .catch((err) => {
+                                        logger.error(err.message, 'groupController: checkLastMember', 10);
+                                        reject(response.generate(true, 'Failed to leave group', 403, null));
+                                    });
+
+                            } else {
+                                logger.info('Not Last Member and last admin of group', 'groupController: checkLastMember()', 10);
+                                resolve(false);
+                            }
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: checkLastMember()', 10);
+                        reject(response.generate(true, 'Failed to leave group', 500, null));
+                    });
+            });
+        }
+
+        let groupMembersUpdated = (isLastMember) => {
+            return new Promise((resolve, reject) => {
+                if (isLastMember)
+                    resolve();
+                else {
+                    GroupModel.update({
+                            groupId: req.body.groupId,
+                        }, {
+                            $pull: {
+                                members: { user_id: req.user._id }
+                            }
+                        })
+                        .then((result) => {
+                            if (result.nModified != 0) {
+                                logger.info('Updated Group Members', 'groupController: groupMembersUpdated()', 10);
+                                resolve();
+                            } else {
+                                logger.error('Unable to Update Group Members', 'groupController: groupMembersUpdated()', 10);
+                                resolve(response.generate(true, 'User unable to leave group', 403, null));
+                            }
+                        })
+                        .catch((err) => {
+                            logger.error(err.message, 'groupController: groupMembersUpdated()', 10);
+                            reject(response.generate(true, 'Failed to leave group', 500, null));
+                        });
+                }
+            });
+        }
+
+        //<--Local Functions End
+
+        validateField(req, res)
+            .then(getGroupObjectId)
+            .then(findUserAndGetObjectId)
+            .then(leaveGroup)
+            .then(checkLastMember)
+            .then(groupMembersUpdated)
+            .then(() => {
+                res.status(200);
+                res.send(response.generate(false, 'Left group sucessfully', 200, null));
+            })
+            .catch((err) => {
+                res.status(err.status);
+                res.send(err);
+            });
+
+    },
+
+    removeUser: (req, res) => {
+
+        //Local Function Start-->
+
+        let validateField = () => {
+            return new Promise((resolve, reject) => {
+                if (!req.body.groupId || !req.body.memberId) {
+                    logger.error('Missing Field', 'groupController: validateField()', 5);
+                    reject(response.generate(true, 'Parameter is missing', 400, null));
+                } else {
+                    logger.info('Field Validated', 'groupController: validateField()', 10);
+                    resolve();
+                }
+            });
+        }
+
+        let getGroupObjectId = () => {
+            return new Promise((resolve, reject) => {
+
+                GroupModel.findOne({ groupId: req.body.groupId })
+                    .select('_id')
+                    .exec()
+                    .then((group) => {
+                        if (check.isEmpty(group)) {
+                            logger.error('No Group Found', 'groupController: getGroupObjectId()', 7);
+                            reject(response.generate(true, 'No Group Found', 404, null));
+                        } else {
+                            logger.info('Group Found', 'groupController: getGroupObjectId()', 10);
+                            req.body["group_id"] = group._id;
+                            resolve(req.user.userId);
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: getGroupObjectId()', 10);
+                        reject(response.generate(true, 'Failed to remove user', 500, null));
+                    });
+            });
+        }
+
+        let checkAdminAndGetId = (user_id) => {
+            return new Promise((resolve, reject) => {
+
+                GroupModel.findOne({
+                        groupId: req.body.groupId,
+                        members: {
+                            $elemMatch: {
+                                user_id: user_id,
+                                admin: true
+                            }
+                        }
+                    }, { "members.$": 1 })
+                    .then((admin) => {
+                        if (check.isEmpty(admin)) {
+                            logger.error('User Not Admin', 'groupController: checkAdminAndGetId()', 10);
+                            resolve(response.generate(true, 'Unable to remove user', 403, null));
+                        } else {
+                            logger.info('User Checked Admin', 'groupController: checkAdminAndGetId()', 10);
+                            findUserAndGetObjectId(req.body.memberId)
+                                .then((user_id) => {
+                                    logger.info('Member _id Found', 'groupController: checkAdminAndGetId()', 10);
+                                    req.body["member_id"] = user_id;
+                                    req.user.modifiedOn = admin.members[0].modifiedOn;
+                                    resolve();
+                                })
+                                .catch((err) => {
+                                    logger.error(err.message, 'groupController: checkAdminAndGetId()', 10);
+                                    reject(response.generate(true, 'Failed to remove user', 500, null));
+                                });
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: checkAdminAndGetId()', 10);
+                        reject(response.generate(true, 'Failed to remove user', 500, null));
+                    });
+            });
+        }
+
+        let groupMembersUpdated = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    groupId: req.body.groupId,
+                    members: {
+                        $elemMatch: {
+                            user_id: req.body.member_id,
+                            $or: [{
+                                $and: [
+                                    { admin: true },
+                                    { modifiedOn: { $gte: req.user.modifiedOn } }
+                                ]
+                            }, {
+                                admin: false
+                            }]
+                        }
+                    }
+                };
+
+                let updateQuery = {
+                    $pull: {
+                        members: { user_id: req.body.member_id }
+                    }
+                };
+
+                GroupModel.update(findQuery, updateQuery)
+                    .then((result) => {
+                        if (result.nModified != 0) {
+                            logger.info('Updated Group Members', 'groupController: groupMembersUpdated()', 10);
+                            resolve();
+                        } else {
+                            logger.error('Member became admin before User', 'groupController: groupMembersUpdated()', 10);
+                            reject(response.generate(true, 'Unable to remove, user became admin before you!', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: groupMembersUpdated()', 10);
+                        reject(response.generate(true, 'Failed to leave group', 500, null));
+                    });
+            });
+        }
+
+        let leaveGroup = () => {
+            return new Promise((resolve, reject) => {
+                UserModel.update({
+                        userId: req.body.memberId,
+                    }, {
+                        $pull: {
+                            groups: { group_id: req.body.group_id }
+                        }
+                    })
+                    .then((result) => {
+                        if (result.nModified != 0) {
+                            logger.info('User Left Group', 'groupController: leaveGroup()', 10);
+                            resolve(response.generate(false, 'User removed from group', 200, null));
+                        } else {
+                            logger.error('Unable to Remove User From Group', 'groupController: leaveGroup()', 10);
+                            resolve(response.generate(true, 'Unable to remove user', 403, null));
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'groupController: leaveGroup()', 10);
+                        reject(response.generate(true, 'Failed to remove user', 500, null));
+                    });
+            });
+        }
+
+        //<--Local Functions End
+
+        validateField(req, res)
+            .then(getGroupObjectId)
+            .then(findUserAndGetObjectId)
+            .then(checkAdminAndGetId)
+            .then(groupMembersUpdated)
+            .then(leaveGroup)
             .then((response) => {
                 res.status(200);
                 res.send(response);

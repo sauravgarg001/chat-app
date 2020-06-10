@@ -16,7 +16,9 @@ router.route('/all').get(auth.isAuthorized, groupController.getAllGroups);
 
 router.route('/add').put(auth.isAuthorized, groupController.addUsers);
 
-// router.route('/remove').delete(auth.isAuthorized, groupController.removeUser);
+router.route('/remove').delete(auth.isAuthorized, groupController.removeUser);
+
+router.route('/leave').delete(auth.isAuthorized, groupController.leaveGroup);
 
 router.route('/admin/make').put(auth.isAuthorized, groupController.makeUserAdmin);
 
