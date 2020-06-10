@@ -224,6 +224,19 @@ $(document).ready(function() {
                     $("#txtToast").html(response.message);
                     $('.toast').toast('show');
                     if (!response.error) {
+                        let data = response.data;
+                        let parent = $("#group").parent();
+                        let group = $("#group").clone();
+                        $(group).find(".group-name").text(data.name);
+                        $(group).find(".group-id").text(data.groupId);
+
+                        let name = data.name.toUpperCase().split(' ');
+                        let firstName = name[0];
+                        let lastName = name[1] ? name[1] : ' ';
+                        $(group).find(".group-img .img").text(firstName[0] + lastName[0]);
+
+                        $(group).prop("hidden", false).prop("id", "");
+                        $(parent).prepend($(group));
                         $("#close-sidebar").trigger('click');
                     }
                 },
@@ -454,6 +467,7 @@ $(document).ready(function() {
             $(message).prop("id", "").prop("hidden", false);
             $(parent).append($(message));
 
+            setUndeliveredMessagesInChatBox([data.chatId], { groupId: data.groupId, senderIds: [data.senderId] }, 'group');
             setUnseenChatsInChatBox([data.chatId], { groupId: data.groupId, senderIds: [data.senderId] }, 'group');
         } else {
             setUndeliveredMessagesInChatBox([data.chatId], { groupId: data.groupId, senderIds: [data.senderId] }, 'group');
@@ -499,7 +513,7 @@ $(document).ready(function() {
 
             for (let i = 0; i < data.chatIds.length; i++) {
                 let chatId = data.chatIds[i];
-                $(".message-sent-id").each(function() {
+                $($(".message-sent-id").get().reverse()).each(function() {
                     if ($(this).val() == chatId) {
                         let parent = $(this).parent();
                         let count = $(parent).find(".seen-count-text").text();
@@ -537,7 +551,7 @@ $(document).ready(function() {
 
             for (let i = 0; i < data.chatIds.length; i++) {
                 let chatId = data.chatIds[i];
-                $(".message-sent-id").each(function() {
+                $($(".message-sent-id").get().reverse()).each(function() {
                     if ($(this).val() == chatId) {
                         let parent = $(this).parent();
                         let count = $(parent).find(".delivered-count-text").text();

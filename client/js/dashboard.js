@@ -567,7 +567,7 @@ $(document).ready(function() {
         socket.emit(`${apiType}-chat-msg`, data)
 
         socket.on("getChatId@" + authToken, function(chatId) {
-            $(message).find(".message-sent-id").val(chatId);
+            $('.message-sent-block').last().find(".message-sent-id").val(chatId);
         });
 
     });

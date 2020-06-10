@@ -140,6 +140,7 @@ let groupController = {
 
                                 if (i == members.length - 1) {
                                     delete group._id;
+                                    delete group.members;
                                     resolve(group);
                                 }
                             } else {

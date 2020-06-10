@@ -75,14 +75,17 @@ $(document).ready(function() {
 
             for (let i = 0; i < data.chatIds.length; i++) {
                 let chatId = data.chatIds[i];
-                $(".message-sent-id").each(function() {
+                $($(".message-sent-id").get().reverse()).each(function() {
+                    let chatId = data.chatIds[i];
                     if ($(this).val() == chatId) {
                         let parent = $(this).parent();
 
                         $(parent).find(".status-sent").hide();
                         $(parent).find(".status-delivered").hide();
                         $(parent).find(".status-seen").slideDown();
-                        return false;
+                        i++;
+                        if (i >= data.chatIds.length)
+                            return false;
                     }
                 });
             }
@@ -95,15 +98,17 @@ $(document).ready(function() {
         if ($(".sender.active .sender-id").text() == data.receiverId) {
 
             for (let i = 0; i < data.chatIds.length; i++) {
-                let chatId = data.chatIds[i];
-                $(".message-sent-id").each(function() {
+                $($(".message-sent-id").get().reverse()).each(function() {
+                    let chatId = data.chatIds[i];
                     if ($(this).val() == chatId) {
                         let parent = $(this).parent();
 
                         $(parent).find(".status-sent").hide();
                         $(parent).find(".status-delivered").slideDown();
                         $(parent).find(".status-seen").hide();
-                        return false;
+                        i++;
+                        if (i >= data.chatIds.length)
+                            return false;
                     }
                 });
             }
