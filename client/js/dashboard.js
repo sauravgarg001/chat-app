@@ -559,6 +559,7 @@ $(document).ready(function() {
     //-------------------------------------------------
     $('body').on('click', '.sender,.group', function(e) { //click event on each sender for dynamic elements
 
+        let messageSender = $(this);
         let apiType;
         if ($(this).hasClass("group")) {
             apiType = 'group';
@@ -792,6 +793,7 @@ $(document).ready(function() {
             return new Promise((resolve, reject) => {
                 $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight);
                 if ($('#chatBox')[0].scrollTop == 0) { //check whether there is no vertical scrollbar showing
+                    $(messageSender).addClass("active");
                     $('#chatBox').trigger("scroll");
                     setTimeout(function() {
                         $('#chatBox').scrollTop($('#chatBox')[0].scrollHeight); //set vertical scrollbar to bottom
@@ -808,7 +810,6 @@ $(document).ready(function() {
             .then(loadOldMessages)
             .then(() => {
                 $("#no-message").hide();
-                $(this).addClass("active");
             })
             .catch((err) => {
                 if (noMessages)
@@ -816,7 +817,7 @@ $(document).ready(function() {
                 else
                     $("#no-message").hide()
                 console.log(err);
-                $(this).addClass("active");
+                $(messageSender).addClass("active");
             });
 
     });

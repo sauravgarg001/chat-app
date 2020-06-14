@@ -1,9 +1,6 @@
 $(document).ready(function() {
 
-    //-------------------------------------------------
     socket.on("online-user@" + authToken, (userId) => {
-        console.log("online-use");
-        console.log(userId);
         let sender = $(`.sender .sender-id:contains(${userId})`).parents(".sender");
         $(sender).find(".sender-message-status").show();
         $(sender).find(".sender-last-seen").hide();

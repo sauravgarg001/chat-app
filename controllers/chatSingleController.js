@@ -312,41 +312,85 @@ let chatController = {
 
     countUserUnSeenChat: (req, res) => {
 
-        let query = [{
-                "$match": {
-                    "receiverId": req.user.userId,
-                    "seen": false
+        //Local Function Start-->
+
+        let findBlockedUsers = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    userId: req.user.userId
                 }
-            },
-            {
-                "$group": {
-                    "_id": {
-                        "senderId": "$senderId"
+                let projectQuery = {
+                    _id: 0,
+                    blocked: 1,
+                }
+                UserModel.findOne(findQuery, projectQuery)
+                    .populate('blocked.user_id', '-_id userId')
+                    .then((user) => {
+                        logger.info('Blocked Users Found', 'chatController: countUserUnSeenChat(): findBlockedUsers()', 10);
+                        let blockedUsers = Array();
+                        for (let i = 0; i < user.blocked.length; i++) {
+                            blockedUsers.push(user.blocked[0].user_id.userId);
+                        }
+                        resolve(blockedUsers);
+
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatController: countUserUnSeenChat(): findBlockedUsers()', 10);
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
+                    })
+            });
+        }
+
+        let getUnseenCount = (blockedUsers) => {
+            return new Promise((resolve, reject) => {
+                let query = [{
+                        "$match": {
+                            "receiverId": req.user.userId,
+                            "senderId": { $nin: blockedUsers },
+                            "seen": false
+                        }
                     },
-                    "count": {
-                        $sum: 1
+                    {
+                        "$group": {
+                            "_id": {
+                                "senderId": "$senderId"
+                            },
+                            "count": {
+                                $sum: 1
+                            }
+                        }
+                    },
+                    {
+                        "$project": {
+                            "senderId": "$_id.senderId",
+                            "count": "$count",
+                            "_id": 0
+                        }
                     }
-                }
-            },
-            {
-                "$project": {
-                    "senderId": "$_id.senderId",
-                    "count": "$count",
-                    "_id": 0
-                }
-            }
-        ];
+                ];
 
-        ChatModel.aggregate(query)
-            .then((result) => {
-                logger.info("Unseen Chat Count Found", 'chatController: countUserUnSeenChat()', 10);
-                res.send(response.generate(false, 'unseen chat count found.', 200, result))
+                ChatModel.aggregate(query)
+                    .then((result) => {
+                        logger.info("Unseen Chat Count Found", 'chatController: countUserUnSeenChat()', 10);
+                        resolve(response.generate(false, 'unseen chat count found.', 200, result))
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatController: countUserUnSeenChat()', 10);
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
+                    });
+            });
+        }
 
+        //<--Local Functions End
+
+        findBlockedUsers()
+            .then(getUnseenCount)
+            .then((chatCount) => {
+                res.send(chatCount);
             })
             .catch((err) => {
-                logger.error(err.message, 'chatController: countUserUnSeenChat()', 10);
-                res.send(response.generate(true, `Failed to perform action`, 500, null));
-            });
+                res.send(err);
+            })
 
     },
 
@@ -363,6 +407,39 @@ let chatController = {
                     logger.info('Parameters Validated', 'chatController: getUserUnSeenChat(): validateParams()', 9);
                     resolve();
                 }
+            });
+        }
+
+        let checkBlockedUser = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    userId: req.user.userId
+                }
+                let projectQuery = {
+                    _id: 0,
+                    blocked: 1,
+                }
+                UserModel.findOne(findQuery, projectQuery)
+                    .populate('blocked.user_id', '-_id userId')
+                    .then((user) => {
+                        let isBlocked = false;
+                        for (let i = 0; i < user.blocked.length; i++) {
+                            if (user.blocked[0].user_id.userId == req.query.senderId) {
+                                logger.info('User is Blocked', 'chatController: getUserUnSeenChat(): checkBlockedUser()');
+                                reject(response.generate(true, 'No Chat Found', 200, null));
+                                isBlocked = true;
+                                break;
+                            }
+                        }
+                        if (!isBlocked) {
+                            logger.info('User is not Blocked', 'chatController: getUserUnSeenChat(): checkBlockedUser()');
+                            resolve();
+                        }
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatController: getUserUnSeenChat(): checkBlockedUser()', 10);
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
+                    })
             });
         }
 
@@ -398,6 +475,7 @@ let chatController = {
         //<--Local Functions End
 
         validateParams()
+            .then(checkBlockedUser)
             .then(findChats)
             .then((chats) => {
                 res.send(response.generate(false, 'chat found and listed.', 200, chats))

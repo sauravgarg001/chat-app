@@ -141,9 +141,14 @@ let setServer = (server) => {
 
                     redis.getAllUsersInAHash('onlineUsers')
                         .then((result) => {
-                            console.log(result[chatMessage.receiverId]);
-
-                            myIo.emit("receive-single@" + result[chatMessage.receiverId], chatMessage);
+                            checkBlocked(chatMessage.receiverId, chatMessage.senderId)
+                                .then((isBlocked) => {
+                                    if (!isBlocked)
+                                        myIo.emit("receive-single@" + result[chatMessage.receiverId], chatMessage);
+                                })
+                                .catch((err) => {
+                                    console.log(err);
+                                });
                         })
                         .catch((err) => {
                             console.log(err);
@@ -166,7 +171,6 @@ let setServer = (server) => {
                 if (user.data.userId == chatMessage.senderId) {
                     chatMessage['chatId'] = shortid.generate();
                     myIo.emit("getChatId@" + data.authToken, chatMessage['chatId']);
-                    console.log("Message received:" + chatMessage);
 
                     setTimeout(function() { //save chat after one second delay
 
@@ -193,7 +197,23 @@ let setServer = (server) => {
 
                     redis.getAllUsersInAHash('onlineUsers')
                         .then((result) => {
-                            myIo.emit('typing-single@' + result[data.receiverId], data.senderId);
+                            checkBlocked(data.senderId, data.receiverId)
+                                .then((isBlocked) => {
+                                    if (!isBlocked) {
+                                        checkBlocked(data.receiverId, data.senderId)
+                                            .then((isBlocked) => {
+                                                if (!isBlocked) {
+                                                    myIo.emit('typing-single@' + result[data.receiverId], data.senderId);
+                                                }
+                                            })
+                                            .catch((err) => {
+                                                console.log(err);
+                                            });
+                                    }
+                                })
+                                .catch((err) => {
+                                    console.log(err);
+                                });
                         })
                         .catch((err) => {
                             console.log(err);
@@ -565,6 +585,24 @@ let getFriends = (userId) => {
     });
 }
 
+
+let checkBlocked = (receiverId, senderId) => { //check whether receiver has blocked sender
+    return new Promise((resolve, reject) => {
+        UserModel.findOne({ userId: receiverId }).populate('blocked.user_id', '-_id userId')
+            .then((user) => {
+                for (let i = 0; i < user.blocked.length; i++) {
+                    if (user.blocked[i].user_id.userId == senderId) {
+                        resolve(true);
+                        break;
+                    }
+                }
+                resolve(false);
+            }).catch((err) => {
+                reject(err.message);
+            });
+
+    });
+}
 
 module.exports = {
     setServer: setServer
