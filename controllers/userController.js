@@ -509,8 +509,8 @@ let userController = {
 
         let getUserObjectId = () => {
             return new Promise((resolve, reject) => {
-                UserModel.findOne({ userId: req.user.userId })
-                    .select('_id')
+                UserModel.findOne({ userId: req.user.userId }, { blocked: 1, _id: 1 })
+                    .populate('blocked.user_id', '-_id userId')
                     .exec()
                     .then((user) => {
                         if (check.isEmpty(user)) {
@@ -519,8 +519,11 @@ let userController = {
                         } else {
                             logger.info('User Found', 'userController: getUserObjectId()', 10);
                             req.user["_id"] = user._id;
-
-                            resolve();
+                            let blockedUsers = Array();
+                            for (let i = 0; i < user.blocked.length; i++) {
+                                blockedUsers.push(user.blocked[i].user_id.userId);
+                            }
+                            resolve(blockedUsers);
                         }
                     })
                     .catch((err) => {
@@ -530,33 +533,55 @@ let userController = {
             });
         }
 
-        let getUnspammedUsers = () => {
+        let getUnspammedUsers = (blockedUsers) => {
             return new Promise((resolve, reject) => {
                 UserModel.aggregate([{
-                            $lookup: {
-                                from: "spams",
-                                localField: "_id",
-                                foreignField: "user_id",
-                                as: "spam"
-                            }
-                        },
-                        {
-                            $match: {
-                                "spam.by.user_id": {
-                                    $ne: req.user._id
-                                }
-                            }
-                        },
-                        {
-                            $project: {
-                                userId: 1,
-                                firstName: 1,
-                                lastName: 1,
-                                lastSeen: 1,
-                                _id: 0
+                        $lookup: {
+                            from: "spams",
+                            localField: "_id",
+                            foreignField: "user_id",
+                            as: "spam"
+                        }
+                    }, {
+                        $match: {
+                            "spam.by.user_id": {
+                                $ne: req.user._id
                             }
                         }
-                    ])
+                    }, {
+                        $project: {
+                            userId: 1,
+                            firstName: 1,
+                            lastName: 1,
+                            lastSeen: 1,
+                            blocked: {
+                                $filter: {
+                                    input: '$blocked',
+                                    as: 'user',
+                                    cond: {
+                                        $eq: ['$$user.user_id', req.user._id]
+                                    }
+                                }
+                            },
+                            _id: 0
+                        }
+                    }, {
+                        $unwind: {
+                            path: "$blocked",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    }, {
+                        $project: {
+                            userId: 1,
+                            firstName: 1,
+                            lastName: 1,
+                            lastSeen: {
+                                $cond: [{
+                                    $or: [{ $eq: ["$blocked.user_id", req.user._id] }, { $in: ["$userId", blockedUsers] }]
+                                }, null, "$lastSeen"]
+                            }
+                        }
+                    }])
                     .then((users) => {
                         if (check.isEmpty(users)) {
                             logger.info('No User Found', 'User Controller: getUnspammedUsers');

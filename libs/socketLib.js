@@ -70,11 +70,13 @@ let setServer = (server) => {
                                                 console.log(`${fullName} is online`);
                                                 let users = Object.keys(result);
                                                 for (let u = 0; u < users.length; u++) {
-                                                    getFriends(users[u])
+                                                    getObjectID(users[u])
+                                                        .then(getBlockedUsers)
+                                                        .then(getFriends)
                                                         .then((friends) => {
                                                             for (let i = 0; i < friends.length; i++) {
                                                                 if (result[friends[i].userId])
-                                                                    myIo.emit('online-user@' + result[friends[i].userId], users[i]);
+                                                                    myIo.emit('online-user@' + result[friends[i].userId], users[u]);
                                                             }
                                                         })
                                                         .catch((err) => {
@@ -200,15 +202,7 @@ let setServer = (server) => {
                             checkBlocked(data.senderId, data.receiverId)
                                 .then((isBlocked) => {
                                     if (!isBlocked) {
-                                        checkBlocked(data.receiverId, data.senderId)
-                                            .then((isBlocked) => {
-                                                if (!isBlocked) {
-                                                    myIo.emit('typing-single@' + result[data.receiverId], data.senderId);
-                                                }
-                                            })
-                                            .catch((err) => {
-                                                console.log(err);
-                                            });
+                                        myIo.emit('typing-single@' + result[data.receiverId], data.senderId);
                                     }
                                 })
                                 .catch((err) => {
@@ -382,7 +376,9 @@ let setServer = (server) => {
                 redis.getAllUsersInAHash('onlineUsers')
                     .then((result) => {
 
-                        getFriends(socket.userId)
+                        getObjectID(socket.userId)
+                            .then(getBlockedUsers)
+                            .then(getFriends)
                             .then((friends) => {
                                 for (let i = 0; i < friends.length; i++) {
                                     if (result[friends[i].userId])
@@ -486,8 +482,53 @@ eventEmitter.on('save-last-seen', (data) => {
 
 });
 
-let getFriends = (userId) => {
+let getObjectID = (userId) => {
     return new Promise((resolve, reject) => {
+        UserModel.findOne({ userId: userId }, { blocked: 1, _id: 1 })
+            .populate('blocked.user_id', '-_id userId')
+            .exec()
+            .then((user) => {
+                if (check.isEmpty(user)) {
+                    reject('No User Found');
+                } else {
+                    let blockedUsers = Array();
+                    for (let i = 0; i < user.blocked.length; i++) {
+                        blockedUsers.push(user.blocked[i].user_id.userId);
+                    }
+                    resolve({ userId: userId, user_id: user._id, blockedUsers: blockedUsers });
+                }
+            })
+            .catch((err) => {
+                reject(err.message);
+            });
+    });
+}
+let getBlockedUsers = (data) => {
+    return new Promise((resolve, reject) => {
+        let user_id = data.user_id;
+        let userId = data.userId;
+        let blockedUsers = data.blockedUsers;
+        UserModel.find({ "blocked.user_id": { $eq: user_id } }, { userId: 1, _id: 0 })
+            .exec()
+            .then((users) => {
+                for (let i = 0; i < users.length; i++) {
+                    blockedUsers.push(users[i].userId);
+                }
+                resolve({ userId: userId, blockedUsers: blockedUsers });
+            })
+            .catch((err) => {
+                reject(err.message);
+            });
+    });
+}
+
+let getFriends = (data) => {
+    return new Promise((resolve, reject) => {
+        let userId = data.userId;
+        let blockedUsers = data.blockedUsers;
+        console.log("blocked:");
+        console.log(JSON.stringify(blockedUsers));
+
         SingleChatModel.aggregate([{
                 "$match": {
                     "$or": [{
@@ -505,7 +546,7 @@ let getFriends = (userId) => {
             {
                 "$group": {
                     "_id": {
-                        "senderId": {
+                        "userId": {
                             $cond: {
                                 if: {
                                     $eq: ["$senderId", userId]
@@ -519,65 +560,18 @@ let getFriends = (userId) => {
             },
             {
                 "$project": {
-                    "senderId": "$_id.senderId",
+                    "userId": "$_id.userId",
                     "_id": 0
                 }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "senderId",
-                    foreignField: "userId",
-                    as: "fromUsers"
-                }
-            },
-            {
-                $replaceRoot: {
-                    newRoot: {
-                        $mergeObjects: [{
-                            $arrayElemAt: ["$fromUsers", 0]
-                        }, "$$ROOT"]
-                    }
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    userId: 1
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "blocked.user_id",
-                    as: "blockedUser"
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    userId: 1,
-                    blocked: {
-                        $cond: [{
-                            $eq: [{
-                                $size: "$blockedUser"
-                            }, 0]
-                        }, false, true]
-                    }
-                }
-            },
-            {
-                $match: {
-                    blocked: false
-                }
-            },
-            {
-                $project: {
-                    userId: 1
-                }
+            }, {
+                "$match": {
+                    "userId": { $nin: blockedUsers }
+                },
             }
         ]).then((friends) => {
+            console.log("friends:");
+
+            console.log(JSON.stringify(friends));
             resolve(friends);
         }).catch((err) => {
             reject(err.message);
@@ -586,17 +580,36 @@ let getFriends = (userId) => {
 }
 
 
-let checkBlocked = (receiverId, senderId) => { //check whether receiver has blocked sender
+let checkBlocked = (receiverId, senderId) => { //check whether receiver has blocked sender or vice versa
     return new Promise((resolve, reject) => {
         UserModel.findOne({ userId: receiverId }).populate('blocked.user_id', '-_id userId')
             .then((user) => {
+                let isBlocked = false;
                 for (let i = 0; i < user.blocked.length; i++) {
                     if (user.blocked[i].user_id.userId == senderId) {
-                        resolve(true);
+                        isBlocked = true;
                         break;
                     }
                 }
-                resolve(false);
+                if (isBlocked) {
+                    resolve(true);
+                } else {
+                    UserModel.findOne({ userId: senderId }).populate('blocked.user_id', '-_id userId')
+                        .then((user) => {
+                            for (let i = 0; i < user.blocked.length; i++) {
+                                if (user.blocked[i].user_id.userId == receiverId) {
+                                    isBlocked = true;
+                                    break;
+                                }
+                            }
+                            if (isBlocked)
+                                resolve(true);
+                            else
+                                resolve(false);
+                        }).catch((err) => {
+                            reject(err.message);
+                        });
+                }
             }).catch((err) => {
                 reject(err.message);
             });

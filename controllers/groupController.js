@@ -129,7 +129,7 @@ let groupController = {
         let createGroup = (members) => {
             return new Promise((resolve, reject) => {
 
-                if (members.length == 0) {
+                if (members.length == 1) {
 
                     logger.error('Cannot add blocked user', 'groupController: createGroup', 10);
                     reject(response.generate(true, 'Failed to create group', 403, null));
