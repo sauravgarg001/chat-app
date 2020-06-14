@@ -7,6 +7,7 @@ const check = require('../libs/checkLib');
 
 //Models
 const ChatModel = mongoose.model('SingleChat');
+const UserModel = mongoose.model('User');
 
 
 let chatController = {
@@ -206,10 +207,38 @@ let chatController = {
 
         //Local Function Start-->
 
-        let findUndeliveredChat = () => {
+        let findBlockedUsers = () => {
+            return new Promise((resolve, reject) => {
+                let findQuery = {
+                    userId: req.user.userId
+                }
+                let projectQuery = {
+                    _id: 0,
+                    blocked: 1,
+                }
+                UserModel.findOne(findQuery, projectQuery)
+                    .populate('blocked.user_id', '-_id userId')
+                    .then((user) => {
+                        logger.info('Blocked Users Found', 'chatController: markAllUserChatDelivered(): findBlockedUsers()', 10);
+                        let blockedUsers = Array();
+                        for (let i = 0; i < user.blocked.length; i++) {
+                            blockedUsers.push(user.blocked[0].user_id.userId);
+                        }
+                        resolve(blockedUsers);
+
+                    })
+                    .catch((err) => {
+                        logger.error(err.message, 'chatController: markAllUserChatDelivered(): findBlockedUsers()', 10);
+                        reject(response.generate(true, `Failed to perform action`, 500, null));
+                    })
+            });
+        }
+
+        let findUndeliveredChat = (blockedUsers) => {
             return new Promise((resolve, reject) => {
                 let findQuery = {
                     receiverId: req.user.userId,
+                    senderId: { $nin: blockedUsers },
                     delivered: false
                 }
 
@@ -223,7 +252,7 @@ let chatController = {
                             reject(response.generate(true, 'No Undelivered Chat Found', 200, null));
                         } else {
                             logger.info('Undelivered Chat Found', 'chatController: markAllUserChatDelivered(): findUndeliveredChat()');
-                            resolve(chats)
+                            resolve({ chats: chats, blockedUsers: blockedUsers });
                         }
                     })
                     .catch((err) => {
@@ -233,10 +262,13 @@ let chatController = {
             });
         }
 
-        let modifyChat = (chats) => {
+        let modifyChat = (data) => {
             return new Promise((resolve, reject) => {
+                let chats = data.chats;
+                let blockedUsers = data.blockedUsers;
                 let findQuery = {
                     receiverId: req.user.userId,
+                    senderId: { $nin: blockedUsers },
                     delivered: false
                 }
 
@@ -266,12 +298,14 @@ let chatController = {
 
         //<--Local Functions End
 
-        findUndeliveredChat()
+        findBlockedUsers()
+            .then(findUndeliveredChat())
             .then(modifyChat)
             .then((result) => {
                 res.send(response.generate(false, 'All Single Chat marked as delivered', 200, result));
             })
             .catch((error) => {
+                res.status(error.status);
                 res.send(error);
             })
     },

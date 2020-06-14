@@ -68,14 +68,19 @@ let setServer = (server) => {
                                         redis.getAllUsersInAHash('onlineUsers')
                                             .then((result) => {
                                                 console.log(`${fullName} is online`);
-
-                                                // setting room name
-                                                socket.room = 'incubChat';
-                                                // joining chat-group room.
-                                                socket.join(socket.room);
-                                                socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
-                                                socket.emit('online-user-list', Object.keys(result));
-
+                                                let users = Object.keys(result);
+                                                for (let u = 0; u < users.length; u++) {
+                                                    getFriends(users[u])
+                                                        .then((friends) => {
+                                                            for (let i = 0; i < friends.length; i++) {
+                                                                if (result[friends[i].userId])
+                                                                    myIo.emit('online-user@' + result[friends[i].userId], users[i]);
+                                                            }
+                                                        })
+                                                        .catch((err) => {
+                                                            console.log(err);
+                                                        });
+                                                }
                                             })
                                             .catch((err) => {
                                                 console.log(err);
@@ -356,15 +361,23 @@ let setServer = (server) => {
                 redis.deleteUserFromHash('onlineUsers', socket.userId);
                 redis.getAllUsersInAHash('onlineUsers')
                     .then((result) => {
-                        socket.leave(socket.room) // unsubscribe the user from his own channel
-                        socket.to(socket.room).broadcast.emit('online-user-list', Object.keys(result));
+
+                        getFriends(socket.userId)
+                            .then((friends) => {
+                                for (let i = 0; i < friends.length; i++) {
+                                    if (result[friends[i].userId])
+                                        myIo.emit('last-seen@' + result[friends[i].userId], userData);
+                                }
+                            })
+                            .catch((err) => {
+                                console.log(err);
+                            });
 
                         setTimeout(function() { //save lastSeen after one second delay
 
                             eventEmitter.emit('save-last-seen', userData);
 
                         }, 1000);
-                        socket.to(socket.room).broadcast.emit('last-seen', userData);
                     })
                     .catch((err) => {
                         console.log(err);
@@ -452,6 +465,105 @@ eventEmitter.on('save-last-seen', (data) => {
         });
 
 });
+
+let getFriends = (userId) => {
+    return new Promise((resolve, reject) => {
+        SingleChatModel.aggregate([{
+                "$match": {
+                    "$or": [{
+                        "senderId": userId
+                    }, {
+                        "receiverId": userId
+                    }]
+                }
+            },
+            {
+                "$sort": {
+                    "createdOn": -1
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "senderId": {
+                            $cond: {
+                                if: {
+                                    $eq: ["$senderId", userId]
+                                },
+                                then: "$receiverId",
+                                else: "$senderId"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "senderId": "$_id.senderId",
+                    "_id": 0
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "senderId",
+                    foreignField: "userId",
+                    as: "fromUsers"
+                }
+            },
+            {
+                $replaceRoot: {
+                    newRoot: {
+                        $mergeObjects: [{
+                            $arrayElemAt: ["$fromUsers", 0]
+                        }, "$$ROOT"]
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    userId: 1
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "blocked.user_id",
+                    as: "blockedUser"
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    userId: 1,
+                    blocked: {
+                        $cond: [{
+                            $eq: [{
+                                $size: "$blockedUser"
+                            }, 0]
+                        }, false, true]
+                    }
+                }
+            },
+            {
+                $match: {
+                    blocked: false
+                }
+            },
+            {
+                $project: {
+                    userId: 1
+                }
+            }
+        ]).then((friends) => {
+            resolve(friends);
+        }).catch((err) => {
+            reject(err.message);
+        });
+    });
+}
 
 
 module.exports = {

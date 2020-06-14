@@ -57,21 +57,6 @@ $(document).ready(function() {
             });
         });
         //-------------------------------------------------
-        socket.on("online-user-list", (users) => {
-
-            $(".sender").find(".sender-message-status").hide();
-            if (Array.isArray(users)) {
-                for (let id of users) {
-                    if (userId == id)
-                        continue;
-                    let sender = $(`.sender .sender-id:contains(${id})`).parents(".sender");
-                    $(sender).find(".sender-message-status").show();
-                    $(sender).find(".sender-last-seen").hide();
-                }
-            }
-
-        });
-        //-------------------------------------------------
         //Local Function-->
 
         let getAllUsers = () => {
@@ -566,12 +551,11 @@ $(document).ready(function() {
 
         socket.emit(`${apiType}-chat-msg`, data)
 
-        socket.on("getChatId@" + authToken, function(chatId) {
-            $('.message-sent-block').last().find(".message-sent-id").val(chatId);
-        });
-
     });
-
+    //-------------------------------------------------
+    socket.on("getChatId@" + authToken, function(chatId) {
+        $('.message-sent-block').last().find(".message-sent-id").val(chatId);
+    });
     //-------------------------------------------------
     $('body').on('click', '.sender,.group', function(e) { //click event on each sender for dynamic elements
 
@@ -599,8 +583,6 @@ $(document).ready(function() {
         //Remove all others senders and groups from active and current sender as active
         $(".sender").removeClass("active");
         $(".group").removeClass("active");
-        $(this).addClass("active");
-
 
         //Remove all dates
         $(".date:not(#date)").remove();
@@ -826,6 +808,7 @@ $(document).ready(function() {
             .then(loadOldMessages)
             .then(() => {
                 $("#no-message").hide();
+                $(this).addClass("active");
             })
             .catch((err) => {
                 if (noMessages)
@@ -833,6 +816,7 @@ $(document).ready(function() {
                 else
                     $("#no-message").hide()
                 console.log(err);
+                $(this).addClass("active");
             });
 
     });
