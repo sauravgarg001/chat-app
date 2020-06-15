@@ -220,24 +220,11 @@ $(document).ready(function() {
                 contentType: 'application/json', // The content type used when sending data to the server.
                 processData: false, // To send DOMDocument or non processed data file it is set to false
                 success: function(response) { // A function to be called if request succeeds
-                    console.log(response);
                     $("#txtToast").html(response.message);
                     $('.toast').toast('show');
                     if (!response.error) {
-                        let data = response.data;
-                        let parent = $("#group").parent();
-                        let group = $("#group").clone();
-                        $(group).find(".group-name").text(data.name);
-                        $(group).find(".group-id").text(data.groupId);
-
-                        let name = data.name.toUpperCase().split(' ');
-                        let firstName = name[0];
-                        let lastName = name[1] ? name[1] : ' ';
-                        $(group).find(".group-img .img").text(firstName[0] + lastName[0]);
-
-                        $(group).prop("hidden", false).prop("id", "");
-                        $(parent).prepend($(group));
                         $("#close-sidebar").trigger('click');
+                        socket.emit("added-to-group", { authToken: authToken, userId: userId, group: response.data });
                     }
                 },
                 error: function(response) { // A function to be called if request failed
@@ -332,6 +319,7 @@ $(document).ready(function() {
                     if (!response.error) {
                         $(".page-wrapper").removeClass("toggled4");
                         $('.add-member-user').removeClass("selected");
+                        socket.emit("added-to-group", { authToken: authToken, userId: userId, group: response.data });
                     }
                 },
                 error: function(response) { // A function to be called if request failed
@@ -438,6 +426,7 @@ $(document).ready(function() {
                 $('.toast').toast('show');
                 if (!response.error) {
                     $(member).remove();
+                    socket.emit("removed-from-group", { groupId: object.groupId, memberId: object.memberId, authToken: authToken, userId: userId });
                 }
             },
             error: function(response) { // A function to be called if request failed
@@ -602,7 +591,8 @@ $(document).ready(function() {
             contentType: 'application/json', // The content type used when sending data to the server.
             processData: false, // To send DOMDocument or non processed data file it is set to false
             success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
                 $(group).remove();
             },
             error: function(response) { // A function to be called if request failed
@@ -610,5 +600,30 @@ $(document).ready(function() {
             }
         });
     });
+    //-------------------------------------------------
+    socket.on("added-to-group@" + authToken, (groupInfo) => {
+        $("#txtToast").html(`Added to new group named '${groupInfo.name}'`);
+        $('.toast').toast('show');
 
+        let parent = $("#group").parent();
+        let group = $("#group").clone();
+        $(group).find(".group-name").text(groupInfo.name);
+        $(group).find(".group-id").text(groupInfo.groupId);
+
+        let name = groupInfo.name.toUpperCase().split(' ');
+        let firstName = name[0];
+        let lastName = name[1] ? name[1] : ' ';
+        $(group).find(".group-img .img").text(firstName[0] + lastName[0]);
+
+        $(group).prop("hidden", false).prop("id", "");
+        $(parent).prepend($(group));
+
+    });
+    //-------------------------------------------------
+    socket.on("removed-from-group@" + authToken, (groupId) => {
+        let group = $(`.group .group-id:contains(${groupId})`).parents('.group');
+        $("#txtToast").html(`Removed from group named '${$(group).find(".group-name").text()}'`);
+        $('.toast').toast('show');
+        $(group).remove();
+    });
 });

@@ -148,6 +148,10 @@ let groupController = {
                                     logger.info('Group Created', 'groupController: createGroup', 10);
                                     group = group.toObject();
 
+                                    for (let i = 0; i < group.members.length; i++) {
+                                        delete group.members[i].joinedOn;
+                                        delete group.members[i].modifiedOn;
+                                    }
                                     delete group.__v;
                                     delete group.modifiedOn;
 
@@ -185,7 +189,6 @@ let groupController = {
 
                                 if (i == members.length - 1) {
                                     delete group._id;
-                                    delete group.members;
                                     resolve(group);
                                 }
                             } else {
@@ -390,7 +393,8 @@ let groupController = {
                             if (result.nModified != 0) {
                                 logger.info('New members added to Group', 'groupController: addMembers()', 10);
 
-                                GroupModel.findOne({ groupId: req.body.groupId })
+                                GroupModel.findOne({ groupId: req.body.groupId }, { "members.joinedOn": 0, "members.modifiedOn": 0 })
+                                    .populate('members.user_id', '-_id userId firstName lastName')
                                     .then((group) => {
                                         logger.info('Updated Group Found', 'groupController: addMembers', 10);
                                         group = group.toObject();

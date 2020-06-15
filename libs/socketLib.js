@@ -237,6 +237,55 @@ let setServer = (server) => {
         });
 
         //-------------------------------------------------
+        socket.on('added-to-group', (data) => {
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.userId) {
+                    let group = data.group;
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            for (let i = 0; i < group.members.length; i++) {
+                                myIo.emit('added-to-group@' + result[group.members[i].user_id.userId], group);
+                            }
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to send removed from group status using " + data.userId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
+            });
+
+        });
+
+        //-------------------------------------------------
+        socket.on('removed-from-group', (data) => {
+
+            token.verifyTokenFromDatabase(data.authToken).then((user) => {
+
+                if (user.data.userId == data.userId) {
+                    redis.getAllUsersInAHash('onlineUsers')
+                        .then((result) => {
+                            myIo.emit('removed-from-group@' + result[data.memberId], data.groupId);
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                } else {
+                    console.log("Somewhen tried to send removed from group status using " + data.userId + " id");
+                }
+            }).catch((err) => {
+                console.log("Auth Error:" + err);
+                socket.emit('auth-error', { status: 500, error: 'Please provide correct auth token' });
+            });
+
+        });
+
+        //-------------------------------------------------
         socket.on('delivered-single', (data) => {
 
             token.verifyTokenFromDatabase(data.authToken).then((user) => {
@@ -526,8 +575,6 @@ let getFriends = (data) => {
     return new Promise((resolve, reject) => {
         let userId = data.userId;
         let blockedUsers = data.blockedUsers;
-        console.log("blocked:");
-        console.log(JSON.stringify(blockedUsers));
 
         SingleChatModel.aggregate([{
                 "$match": {
@@ -569,9 +616,6 @@ let getFriends = (data) => {
                 },
             }
         ]).then((friends) => {
-            console.log("friends:");
-
-            console.log(JSON.stringify(friends));
             resolve(friends);
         }).catch((err) => {
             reject(err.message);

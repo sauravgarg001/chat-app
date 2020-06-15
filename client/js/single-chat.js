@@ -139,7 +139,8 @@ $(document).ready(function() {
             contentType: 'application/json', // The content type used when sending data to the server.
             processData: false, // To send DOMDocument or non processed data file it is set to false
             success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
                 $(sender).remove();
             },
             error: function(response) { // A function to be called if request failed
@@ -166,7 +167,8 @@ $(document).ready(function() {
             contentType: 'application/json', // The content type used when sending data to the server.
             processData: false, // To send DOMDocument or non processed data file it is set to false
             success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
                 $(sender).find('.sender-dropdown-block').hide();
                 $(sender).find('.sender-dropdown-unblock').show();
                 $(sender).find('.sender-blocked').show();
@@ -201,7 +203,8 @@ $(document).ready(function() {
             contentType: 'application/json', // The content type used when sending data to the server.
             processData: false, // To send DOMDocument or non processed data file it is set to false
             success: function(response) { // A function to be called if request succeeds
-                console.info(response.message);
+                $("#txtToast").html(response.message);
+                $('.toast').toast('show');
                 $(sender).find('.sender-dropdown-unblock').hide();
                 $(sender).find('.sender-blocked').hide();
                 $(sender).find('.sender-dropdown-block').show();
